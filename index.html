@@ -687,6 +687,92 @@
                 opacity: 1;
             }
         }
+
+        @media (max-width: 640px) {
+            body {
+                padding: 12px 8px;
+                overflow-x: hidden;
+            }
+
+            .app {
+                height: calc(100vh - 24px);
+                height: calc(100dvh - 24px);
+                /* better on mobile browsers with URL bars */
+                max-width: 100%;
+                overflow-x: hidden;
+            }
+
+            header {
+                padding: 0 4px 10px;
+                flex-wrap: nowrap;
+            }
+
+            .brand {
+                min-width: 0;
+                flex: 1;
+            }
+
+            .brand h1 {
+                font-size: 16px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .brand .tag {
+                display: none;
+                /* hide subtitle on small screens */
+            }
+
+            .header-actions {
+                flex-shrink: 0;
+            }
+
+            .msg-wrap {
+                max-width: 90%;
+            }
+
+            .suggestions {
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+
+            .suggestion {
+                padding: 12px;
+            }
+
+            .welcome {
+                padding: 12px;
+            }
+
+            .welcome h2 {
+                font-size: 18px;
+            }
+
+            .welcome p {
+                font-size: 13px;
+                margin-bottom: 20px;
+            }
+
+            .logo-lg-img {
+                width: 56px;
+                height: 56px;
+                margin-bottom: 14px;
+            }
+
+            .composer {
+                padding: 8px 8px 8px 14px;
+            }
+
+            textarea {
+                font-size: 16px;
+                /* prevents iOS auto-zoom on focus */
+            }
+
+            .hint {
+                display: none;
+            }
+        }
     </style>
 </head>
 
@@ -1066,6 +1152,20 @@
                 setTimeout(() => splash.remove(), 600);
             }, 1200);
         });
+        // Fix keyboard covering input on mobile
+        if (window.visualViewport) {
+            const app = document.querySelector(".app");
+
+            const updateViewport = () => {
+                const vh = window.visualViewport.height;
+                app.style.height = vh + "px";
+                // Scroll to bottom so input stays visible
+                chat.scrollTop = chat.scrollHeight;
+            };
+
+            window.visualViewport.addEventListener("resize", updateViewport);
+            window.visualViewport.addEventListener("scroll", updateViewport);
+        }
     </script>
 </body>
 

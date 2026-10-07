@@ -11,9 +11,8 @@ app.use(express.static(__dirname));
 const APP_NAME = process.env.APP_NAME || "Omni";
 
 // ============================================================
-// GEMINI API KEY
+// KEY EXTRACTION (supports AQ. and AIza)
 // ============================================================
-
 const rawKey = process.env.GEMINI_API_KEY || "";
 const API_KEY = rawKey
     .trim()
@@ -27,234 +26,151 @@ console.log(
     `format: ${API_KEY.startsWith("AQ.") ? "NEW AQ." : "OTHER"}`
 );
 
-if (!API_KEY) {
-    console.error("FATAL: GEMINI_API_KEY is missing.");
-}
-
 // ============================================================
 // MODELS
 // ============================================================
-
 const MODELS = [
     "gemini-flash-lite-latest",
     "gemini-3.5-flash-lite",
     "gemini-2.5-flash-lite"
 ];
 
-const GEMINI_BASE =
-    "https://generativelanguage.googleapis.com/v1beta/models";
+const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 
 // ============================================================
-// REQUEST HEADERS
+// STREAMING REQUEST
 // ============================================================
+async function tryStream(model, contents, res, timeoutMs = 20000) {
+    const url = `${GEMINI_BASE}/${model}:streamGenerateContent?alt=sse`;
 
-function geminiHeaders() {
-    return {
-        "Content-Type": "application/json",
-        "x-goog-api-key": API_KEY,
-        "x-goog-api-client": "Omni/1.0"
-    };
-}
+    console.log(`[STREAM] Starting ${model}`);
 
-// ============================================================
-// SIMPLE NON-STREAMING TEST
-// ============================================================
-
-async function testGemini(model) {
-    const url = `${GEMINI_BASE}/${model}:generateContent`;
-
-    console.log(`[GEMINI TEST] Testing ${model}`);
-
-    const response = await fetch(url, {
+    const upstream = await fetch(url, {
         method: "POST",
-        headers: geminiHeaders(),
-        body: JSON.stringify({
-            contents: [
-                {
-                    role: "user",
-                    parts: [{ text: "Reply with exactly: OK" }]
-                }
-            ]
-        }),
-        signal: AbortSignal.timeout(15000)
+        headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": API_KEY
+        },
+        body: JSON.stringify({ contents }),
+        signal: AbortSignal.timeout(timeoutMs)
     });
 
-    const body = await response.text();
-
-    if (!response.ok) {
-        let message = `HTTP ${response.status}`;
+    if (!upstream.ok) {
+        const text = await upstream.text();
+        let msg = `HTTP ${upstream.status}`;
         try {
-            const json = JSON.parse(body);
-            message = json.error?.message || json.error?.status || message;
+            const j = JSON.parse(text);
+            msg = j.error?.message || msg;
         } catch { }
-
-        const error = new Error(message);
-        error.status = response.status;
-
-        console.error(
-            `[GEMINI TEST] ${model} FAILED: ${response.status} ${message}`
-        );
-        throw error;
+        const err = new Error(msg.split("\n")[0].replace(/^\[\d+\]\s*/, ""));
+        err.status = upstream.status;
+        throw err;
     }
 
-    let json;
-    try {
-        json = JSON.parse(body);
-    } catch {
-        throw new Error("Gemini returned invalid JSON.");
+    if (!upstream.body) {
+        throw new Error("Gemini returned no response body.");
     }
 
-    const text =
-        json.candidates?.[0]?.content?.parts
-            ?.map(part => part.text || "")
-            .join("") || "";
+    const reader = upstream.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let sentAny = false;
 
-    console.log(`[GEMINI TEST] ${model} SUCCESS: ${JSON.stringify(text)}`);
-    return text;
-}
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-// ============================================================
-// DEBUG ENDPOINT
-// ============================================================
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop();
 
-app.get("/debug/gemini", async (req, res) => {
-    if (!API_KEY) {
-        return res.status(500).json({
-            ok: false,
-            error: "GEMINI_API_KEY is missing"
-        });
-    }
+        for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed.startsWith("data:")) continue;
+            const json = trimmed.slice(5).trim();
+            if (!json || json === "[DONE]") continue;
 
-    const results = [];
-
-    for (const model of MODELS) {
-        try {
-            const text = await testGemini(model);
-            results.push({
-                model,
-                ok: true,
-                response: text
-            });
-            break; // one success is enough
-        } catch (error) {
-            results.push({
-                model,
-                ok: false,
-                status: error.status || null,
-                error: error.message
-            });
-
-            // Stop on hard auth/config errors
-            if (
-                error.status &&
-                error.status !== 404 &&
-                error.status !== 429
-            ) {
-                break;
-            }
+            try {
+                const parsed = JSON.parse(json);
+                const text =
+                    parsed.candidates?.[0]?.content?.parts
+                        ?.map(p => p.text || "")
+                        .join("") || "";
+                if (text) {
+                    sentAny = true;
+                    res.write(text);
+                }
+            } catch { }
         }
     }
 
-    const success = results.some(r => r.ok);
-
-    return res.status(success ? 200 : 502).json({
-        ok: success,
-        keyLoaded: !!API_KEY,
-        keyLength: API_KEY.length,
-        keyFormat: API_KEY.startsWith("AQ.") ? "AQ." : "OTHER",
-        results
-    });
-});
+    return sentAny;
+}
 
 // ============================================================
-// CHAT (non-streaming for now)
+// CHAT (streaming)
 // ============================================================
-
 app.post("/chat", async (req, res) => {
     const { messages } = req.body;
 
-    if (!messages || !Array.isArray(messages) || !messages.length) {
-        return res.status(400).json({ reply: "No messages provided." });
+    if (!messages || !messages.length) {
+        return res.status(400).send("No messages provided.");
     }
 
     if (!API_KEY) {
-        return res.status(500).json({ reply: "Gemini API key is not configured." });
+        return res.status(500).send("Gemini API key is not configured.");
     }
 
-    const contents = messages.map(message => ({
-        role: message.role === "user" ? "user" : "model",
-        parts: [{ text: String(message.text || "") }]
+    const contents = messages.map(m => ({
+        role: m.role === "user" ? "user" : "model",
+        parts: [{ text: String(m.text || "") }]
     }));
+
+    res.setHeader("Content-Type", "text/plain; charset=utf-8");
+    res.setHeader("Cache-Control", "no-cache, no-transform");
+    res.setHeader("X-Accel-Buffering", "no");
 
     let lastError = null;
 
     for (const model of MODELS) {
         try {
             console.log(`[CHAT] Trying ${model}`);
+            const sent = await tryStream(model, contents, res, 20000);
 
-            const url = `${GEMINI_BASE}/${model}:generateContent`;
-
-            const response = await fetch(url, {
-                method: "POST",
-                headers: geminiHeaders(),
-                body: JSON.stringify({ contents }),
-                signal: AbortSignal.timeout(20000)
-            });
-
-            const body = await response.text();
-
-            if (!response.ok) {
-                let message = `HTTP ${response.status}`;
-                try {
-                    const json = JSON.parse(body);
-                    message = json.error?.message || json.error?.status || message;
-                } catch { }
-
-                const error = new Error(
-                    message.split("\n")[0].replace(/^\[\d+\]\s*/, "")
-                );
-                error.status = response.status;
-                throw error;
+            if (sent) {
+                console.log(`[CHAT] ${model} streamed successfully`);
+                res.end();
+                return;
             }
 
-            const json = JSON.parse(body);
-            const reply =
-                json.candidates?.[0]?.content?.parts
-                    ?.map(part => part.text || "")
-                    .join("") || "(no reply)";
+            console.log(`[CHAT] ${model} returned no text`);
+        } catch (err) {
+            lastError = err;
+            console.error(`[CHAT] ${model} failed:`, err.message);
 
-            console.log(`[CHAT] ${model} SUCCESS`);
-            return res.json({ reply });
+            // Move to next model on quota or model-missing
+            if (err.status === 404 || err.status === 429) continue;
 
-        } catch (error) {
-            lastError = error;
-            console.error(`[CHAT] ${model} failed:`, error.message);
-
-            // Try next model on quota/model-unavailable
-            if (error.status === 404 || error.status === 429) {
-                continue;
-            }
-
-            // Try next model on timeout/network
-            if (/timeout|aborted|fetch failed|network/i.test(error.message)) {
+            // Retry other models on network/timeout
+            if (/timeout|aborted|fetch failed|network/i.test(err.message)) {
                 console.log(`[CHAT] Network/timeout on ${model}, trying next...`);
                 continue;
             }
 
-            // Real config/auth error — stop
+            // Hard error — stop
             break;
         }
     }
 
-    res.status(500).json({
-        reply: "Error: " + (lastError?.message || "All Gemini models failed.")
-    });
+    if (!res.writableEnded) {
+        res.write("Error: " + (lastError?.message || "All models failed"));
+        res.end();
+    }
 });
 
 // ============================================================
 // ROOT
 // ============================================================
-
 app.get("/", (req, res) => {
     res.json({
         status: `${APP_NAME} backend is running`,
@@ -265,7 +181,6 @@ app.get("/", (req, res) => {
 // ============================================================
 // START
 // ============================================================
-
 const PORT = process.env.PORT || 4789;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`${APP_NAME} running on port ${PORT}`);

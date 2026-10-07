@@ -8,7 +8,18 @@ app.use(express.json());
 app.use(express.static(__dirname));
 
 const APP_NAME = process.env.APP_NAME || "Omni";
-const API_KEY = process.env.GEMINI_API_KEY;
+
+// ---- Key extraction (supports BOTH AQ. and AIza formats) ----
+const rawKey = process.env.GEMINI_API_KEY || "";
+const cleaned = rawKey.trim().replace(/^["']|["']$/g, '').replace(/^GEMINI_API_KEY=/, '');
+const extracted = cleaned.match(/(?:AIza[0-9A-Za-z_-]{35}|AQ\.[A-Za-z0-9_-]{48,})/);
+const API_KEY = extracted ? extracted[0] : cleaned;
+
+console.log(`[ENV CHECK] present: ${!!API_KEY} | length: ${API_KEY.length} | prefix: ${API_KEY.slice(0, 8)}... | format: ${API_KEY.startsWith('AQ.') ? 'NEW AQ.' : 'OLD AIza'}`);
+
+if (!API_KEY) {
+    console.error("FATAL: GEMINI_API_KEY is missing in Railway Variables");
+}
 
 const MODELS = [
     "gemini-flash-lite-latest",
@@ -17,11 +28,16 @@ const MODELS = [
 ];
 
 async function tryStream(model, contents, res) {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${API_KEY}`;
+    // Native Gemini endpoint — the key goes in the header, not the URL.
+    // This is what makes AQ. keys work reliably.
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse`;
 
     const upstream = await fetch(url, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": API_KEY
+        },
         body: JSON.stringify({ contents }),
         signal: AbortSignal.timeout(60000)
     });

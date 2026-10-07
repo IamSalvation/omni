@@ -67,7 +67,6 @@
             height: 100%;
             margin: 0;
             overflow: hidden;
-            /* prevent whole-page scroll on mobile */
         }
 
         body {
@@ -78,7 +77,6 @@
             overscroll-behavior: none;
         }
 
-        /* App fills the screen exactly */
         .app {
             position: fixed;
             inset: 0;
@@ -185,7 +183,6 @@
             height: 16px;
         }
 
-        /* Chat area */
         #chat {
             flex: 1;
             overflow-y: auto;
@@ -197,7 +194,6 @@
             gap: 14px;
         }
 
-        /* Message wrappers */
         .msg-wrap {
             position: relative;
             display: flex;
@@ -254,14 +250,6 @@
             border-bottom-left-radius: 4px;
             box-shadow: var(--shadow);
             width: 100%;
-        }
-
-        .timestamp {
-            font-size: 11px;
-            color: var(--muted);
-            padding: 0 4px;
-            margin-top: 4px;
-            opacity: 0.7;
         }
 
         .actions {
@@ -365,7 +353,6 @@
             color: var(--muted);
         }
 
-        /* Welcome */
         .welcome {
             display: flex;
             flex-direction: column;
@@ -436,7 +423,6 @@
             font-size: 12px;
         }
 
-        /* Composer — fixed to bottom, full width */
         .composer-wrap {
             flex-shrink: 0;
             padding-top: 8px;
@@ -466,7 +452,6 @@
             color: var(--text);
             font-family: inherit;
             font-size: 16px;
-            /* prevents iOS zoom on focus */
             line-height: 1.4;
             resize: none;
             outline: none;
@@ -584,7 +569,6 @@
             }
         }
 
-        /* Splash */
         #splash {
             position: fixed;
             inset: 0;
@@ -676,7 +660,6 @@
             }
         }
 
-        /* Wider screens */
         @media (min-width: 720px) {
             .app {
                 max-width: 780px;
@@ -708,7 +691,6 @@
             }
         }
 
-        /* Small phones */
         @media (max-width: 420px) {
             .brand .tag {
                 display: none;
@@ -816,10 +798,6 @@
         function renderBot(text) {
             return marked.parse(text).replace(/<script[\s\S]*?<\/script>/gi, "");
         }
-        function formatTime(ts) {
-            const d = new Date(ts || Date.now());
-            return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-        }
 
         function addMsg(text, role, opts = {}) {
             const wrap = document.createElement("div");
@@ -829,11 +807,6 @@
             if (role === "bot") div.innerHTML = renderBot(text);
             else div.textContent = text;
             wrap.appendChild(div);
-
-            const ts = document.createElement("div");
-            ts.className = "timestamp";
-            ts.textContent = formatTime(opts.time);
-            wrap.appendChild(ts);
 
             const actions = document.createElement("div");
             actions.className = "actions";
@@ -913,7 +886,7 @@
         function renderAll() {
             if (!history.length) { showWelcome(); return; }
             chat.innerHTML = "";
-            history.forEach((m, i) => addMsg(m.text, m.role, { index: i, time: m.time }));
+            history.forEach((m, i) => addMsg(m.text, m.role, { index: i }));
         }
         function setSendState(state) {
             sendBtn.classList.toggle("stopping", state === "stop");
@@ -964,16 +937,9 @@
             return fullText;
         }
 
-        function finalizeStreamedMsg(timestamp) {
+        function finalizeStreamedMsg() {
             const last = chat.lastElementChild;
             if (!last || !last.classList.contains("msg-wrap")) return;
-            if (!last.querySelector(".timestamp")) {
-                const ts = document.createElement("div");
-                ts.className = "timestamp";
-                ts.textContent = formatTime(timestamp);
-                const msgEl = last.querySelector(".msg");
-                if (msgEl) msgEl.after(ts);
-            }
             if (!last.querySelector(".actions")) {
                 const finalDiv = last.querySelector(".msg");
                 const actions = document.createElement("div");
@@ -1002,22 +968,20 @@
             if (!text) return;
             if (history.length === 0) chat.innerHTML = "";
 
-            const now = Date.now();
-            addMsg(text, "user", { index: history.length, time: now });
+            addMsg(text, "user", { index: history.length });
             input.value = "";
             autoResize();
             streaming = true;
             setSendState("stop");
-            history.push({ role: "user", text, time: now });
+            history.push({ role: "user", text });
             saveHistory();
             setStatus("busy");
 
             try {
                 const reply = await streamReply();
-                const botTime = Date.now();
-                history.push({ role: "bot", text: reply, time: botTime });
+                history.push({ role: "bot", text: reply });
                 saveHistory();
-                finalizeStreamedMsg(botTime);
+                finalizeStreamedMsg();
                 setStatus("online");
             } catch (err) {
                 const last = chat.lastElementChild;
@@ -1027,11 +991,10 @@
                     const pd = pw?.querySelector(".msg");
                     const pt = pd?.innerText?.trim() || "";
                     if (pt && pt !== "...") {
-                        const bt = Date.now();
-                        history.push({ role: "bot", text: pt + "\n\n_(stopped)_", time: bt });
+                        history.push({ role: "bot", text: pt + "\n\n_(stopped)_" });
                         saveHistory();
                         pd.innerHTML = renderBot(pt + "\n\n_(stopped)_");
-                        finalizeStreamedMsg(bt);
+                        finalizeStreamedMsg();
                     } else pw?.remove();
                     setStatus("online");
                 } else {
@@ -1056,10 +1019,9 @@
             setStatus("busy");
             try {
                 const reply = await streamReply();
-                const bt = Date.now();
-                history.push({ role: "bot", text: reply, time: bt });
+                history.push({ role: "bot", text: reply });
                 saveHistory();
-                finalizeStreamedMsg(bt);
+                finalizeStreamedMsg();
                 setStatus("online");
             } catch (err) {
                 if (err.name !== "AbortError") {
@@ -1104,7 +1066,6 @@
             }
         });
 
-        // Keyboard: scroll to bottom on focus (mobile)
         input.addEventListener("focus", () => {
             setTimeout(() => {
                 chat.scrollTop = chat.scrollHeight;
@@ -1121,7 +1082,6 @@
         renderAll();
         autoResize();
 
-        /* Visual viewport — keeps layout correct when keyboard opens on mobile */
         if (window.visualViewport) {
             const app = document.querySelector(".app");
             const onResize = () => {
@@ -1135,7 +1095,6 @@
             onResize();
         }
 
-        /* Splash */
         window.addEventListener("load", () => {
             const splash = document.getElementById("splash");
             if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) { splash.remove(); return; }

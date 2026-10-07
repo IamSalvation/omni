@@ -10,9 +10,7 @@ app.use(express.static(__dirname));
 
 const APP_NAME = process.env.APP_NAME || "Omni";
 
-// ============================================================
-// KEY EXTRACTION (supports AQ. and AIza)
-// ============================================================
+// ---- Key extraction (supports AQ. and AIza) ----
 const rawKey = process.env.GEMINI_API_KEY || "";
 const API_KEY = rawKey
     .trim()
@@ -26,9 +24,6 @@ console.log(
     `format: ${API_KEY.startsWith("AQ.") ? "NEW AQ." : "OTHER"}`
 );
 
-// ============================================================
-// MODELS
-// ============================================================
 const MODELS = [
     "gemini-flash-lite-latest",
     "gemini-3.5-flash-lite",
@@ -37,9 +32,6 @@ const MODELS = [
 
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 
-// ============================================================
-// STREAMING REQUEST
-// ============================================================
 async function tryStream(model, contents, res, timeoutMs = 20000) {
     const url = `${GEMINI_BASE}/${model}:streamGenerateContent?alt=sse`;
 
@@ -67,10 +59,6 @@ async function tryStream(model, contents, res, timeoutMs = 20000) {
         throw err;
     }
 
-    if (!upstream.body) {
-        throw new Error("Gemini returned no response body.");
-    }
-
     const reader = upstream.body.getReader();
     const decoder = new TextDecoder();
     let buffer = "";
@@ -92,10 +80,7 @@ async function tryStream(model, contents, res, timeoutMs = 20000) {
 
             try {
                 const parsed = JSON.parse(json);
-                const text =
-                    parsed.candidates?.[0]?.content?.parts
-                        ?.map(p => p.text || "")
-                        .join("") || "";
+                const text = parsed.candidates?.[0]?.content?.parts?.map(p => p.text).join("") || "";
                 if (text) {
                     sentAny = true;
                     res.write(text);
@@ -107,57 +92,37 @@ async function tryStream(model, contents, res, timeoutMs = 20000) {
     return sentAny;
 }
 
-// ============================================================
-// CHAT (streaming)
-// ============================================================
 app.post("/chat", async (req, res) => {
     const { messages } = req.body;
-
     if (!messages || !messages.length) {
         return res.status(400).send("No messages provided.");
     }
 
-    if (!API_KEY) {
-        return res.status(500).send("Gemini API key is not configured.");
-    }
-
     const contents = messages.map(m => ({
         role: m.role === "user" ? "user" : "model",
-        parts: [{ text: String(m.text || "") }]
+        parts: [{ text: m.text }]
     }));
 
     res.setHeader("Content-Type", "text/plain; charset=utf-8");
-    res.setHeader("Cache-Control", "no-cache, no-transform");
+    res.setHeader("Cache-Control", "no-cache");
     res.setHeader("X-Accel-Buffering", "no");
 
     let lastError = null;
 
     for (const model of MODELS) {
         try {
-            console.log(`[CHAT] Trying ${model}`);
             const sent = await tryStream(model, contents, res, 20000);
-
             if (sent) {
-                console.log(`[CHAT] ${model} streamed successfully`);
                 res.end();
                 return;
             }
-
             console.log(`[CHAT] ${model} returned no text`);
         } catch (err) {
             lastError = err;
             console.error(`[CHAT] ${model} failed:`, err.message);
 
-            // Move to next model on quota or model-missing
             if (err.status === 404 || err.status === 429) continue;
-
-            // Retry other models on network/timeout
-            if (/timeout|aborted|fetch failed|network/i.test(err.message)) {
-                console.log(`[CHAT] Network/timeout on ${model}, trying next...`);
-                continue;
-            }
-
-            // Hard error — stop
+            if (/timeout|aborted|fetch failed|network/i.test(err.message)) continue;
             break;
         }
     }
@@ -168,9 +133,6 @@ app.post("/chat", async (req, res) => {
     }
 });
 
-// ============================================================
-// ROOT
-// ============================================================
 app.get("/", (req, res) => {
     res.json({
         status: `${APP_NAME} backend is running`,
@@ -178,9 +140,6 @@ app.get("/", (req, res) => {
     });
 });
 
-// ============================================================
-// START
-// ============================================================
 const PORT = process.env.PORT || 4789;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`${APP_NAME} running on port ${PORT}`);

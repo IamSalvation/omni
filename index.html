@@ -36,6 +36,7 @@
             --code-bg: #2a2a2a;
             --code-text: #f0f0f0;
             --inline-code-bg: #e5e5e7;
+            --icon-hover-bg: rgba(0, 0, 0, 0.06);
             --shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.06);
             --radius: 14px;
             --sidebar-width: 260px;
@@ -57,6 +58,7 @@
             --code-bg: #0a0a0b;
             --code-text: #f0f0f0;
             --inline-code-bg: #2a2a2f;
+            --icon-hover-bg: rgba(255, 255, 255, 0.08);
             --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.4);
         }
 
@@ -290,7 +292,6 @@
             color: var(--muted);
         }
 
-        /* Small dropdown menu */
         .conv-dropdown {
             position: fixed;
             background: var(--panel);
@@ -326,7 +327,6 @@
             color: var(--danger);
         }
 
-        /* Backdrop */
         .backdrop {
             position: fixed;
             inset: 0;
@@ -532,29 +532,47 @@
             width: 100%;
         }
 
+        /* Actions — Lucide icon buttons */
         .actions {
             display: flex;
-            gap: 6px;
-            margin-top: 6px;
-            padding: 0 4px;
+            gap: 2px;
+            margin-top: 4px;
+            padding: 0 2px;
             opacity: 1;
         }
 
         .action-btn {
             background: transparent;
-            border: 1px solid var(--border);
+            border: none;
             color: var(--muted);
-            font-size: 11px;
-            padding: 3px 9px;
-            border-radius: 6px;
+            width: 28px;
+            height: 28px;
+            padding: 0;
+            border-radius: 50%;
             cursor: pointer;
-            transition: all 0.15s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.15s, color 0.15s, transform 0.1s;
         }
 
         .action-btn:hover {
+            background: var(--icon-hover-bg);
             color: var(--text);
-            border-color: var(--muted);
-            background: var(--bot-bg);
+        }
+
+        .action-btn:active {
+            transform: scale(0.92);
+        }
+
+        .action-btn svg {
+            width: 16px;
+            height: 16px;
+            display: block;
+        }
+
+        .action-btn.copied {
+            color: var(--accent);
         }
 
         .edit-box {
@@ -1189,9 +1207,26 @@
         let currentController = null;
 
         /* ============================================================
+           LUCIDE ICONS
+        ============================================================ */
+        const ICONS = {
+            copy: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path></svg>`,
+            pencil: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"></path><path d="m15 5 4 4"></path></svg>`,
+            refresh: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M8 16H3v5"></path></svg>`,
+        };
+
+        function makeBtn({ icon, title, onClick }) {
+            const btn = document.createElement("button");
+            btn.className = "action-btn";
+            btn.title = title;
+            btn.setAttribute("aria-label", title);
+            btn.innerHTML = ICONS[icon];
+            btn.onclick = onClick;
+            return btn;
+        }
+
+        /* ============================================================
            DATA MODEL
-           - conversations: [{ id, title, messages: [{role,text}], createdAt, updatedAt }]
-           - currentId: string | null
         ============================================================ */
         let conversations = [];
         let currentId = null;
@@ -1201,7 +1236,6 @@
         }
 
         function loadData() {
-            // Try new format first
             const raw = localStorage.getItem("omni_conversations");
             if (raw) {
                 try {
@@ -1211,8 +1245,6 @@
                     conversations = [];
                 }
             }
-
-            // Migrate old single-chat format
             const oldHistory = localStorage.getItem("omni_history");
             if (oldHistory) {
                 try {
@@ -1232,13 +1264,9 @@
                 } catch { }
                 localStorage.removeItem("omni_history");
             }
-
-            // If nothing, start fresh
             if (!conversations.length) {
                 createConversation(false);
             }
-
-            // If currentId is invalid, pick the first
             if (!conversations.find(c => c.id === currentId)) {
                 currentId = conversations[0].id;
             }
@@ -1279,7 +1307,6 @@
             const c = getCurrent();
             if (!c) return;
             c.updatedAt = Date.now();
-            // Auto-title from first user message
             if (c.title === "New chat") {
                 c.title = makeTitleFromMessages(c.messages);
             }
@@ -1312,47 +1339,29 @@
                 sidebarList.innerHTML = '<div class="sidebar-empty">No conversations yet.<br>Start a new chat to begin.</div>';
                 return;
             }
-
             const sorted = [...conversations].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
             const groups = groupByDate(sorted);
-
             for (const [label, items] of Object.entries(groups)) {
                 if (!items.length) continue;
                 const labelEl = document.createElement("div");
                 labelEl.className = "sidebar-section-label";
                 labelEl.textContent = label;
                 sidebarList.appendChild(labelEl);
-
                 for (const c of items) {
                     const item = document.createElement("div");
                     item.className = "conv-item" + (c.id === currentId ? " active" : "");
-
                     const title = document.createElement("div");
                     title.className = "conv-title";
                     title.textContent = c.title || "New chat";
                     item.appendChild(title);
-
                     const menu = document.createElement("button");
                     menu.className = "conv-menu";
                     menu.textContent = "⋯";
                     menu.title = "Options";
-                    menu.onclick = (e) => {
-                        e.stopPropagation();
-                        showConvMenu(e, c.id);
-                    };
+                    menu.onclick = (e) => { e.stopPropagation(); showConvMenu(e, c.id); };
                     item.appendChild(menu);
-
-                    item.onclick = () => {
-                        switchTo(c.id);
-                        closeSidebarIfMobile();
-                    };
-
-                    // Double-click to rename
-                    title.ondblclick = (e) => {
-                        e.stopPropagation();
-                        renameConversation(c.id);
-                    };
-
+                    item.onclick = () => { switchTo(c.id); closeSidebarIfMobile(); };
+                    title.ondblclick = (e) => { e.stopPropagation(); renameConversation(c.id); };
                     sidebarList.appendChild(item);
                 }
             }
@@ -1385,48 +1394,36 @@
             if (!confirm(`Delete "${c.title}"? This cannot be undone.`)) return;
             conversations = conversations.filter(x => x.id !== id);
             if (currentId === id) {
-                if (conversations.length) {
-                    currentId = conversations[0].id;
-                } else {
-                    createConversation(false);
-                    currentId = conversations[0].id;
-                }
+                if (conversations.length) currentId = conversations[0].id;
+                else { createConversation(false); currentId = conversations[0].id; }
             }
             saveData();
             renderAll();
             renderSidebar();
         }
 
-        /* Small dropdown menu for ⋯ */
         let activeDropdown = null;
         function closeDropdown() {
-            if (activeDropdown) {
-                activeDropdown.remove();
-                activeDropdown = null;
-            }
+            if (activeDropdown) { activeDropdown.remove(); activeDropdown = null; }
         }
         function showConvMenu(event, id) {
             closeDropdown();
             const dd = document.createElement("div");
             dd.className = "conv-dropdown";
-
             const renameBtn = document.createElement("button");
             renameBtn.textContent = "Rename";
             renameBtn.onclick = () => { closeDropdown(); renameConversation(id); };
             dd.appendChild(renameBtn);
-
             const deleteBtn = document.createElement("button");
             deleteBtn.className = "danger";
             deleteBtn.textContent = "Delete";
             deleteBtn.onclick = () => { closeDropdown(); deleteConversation(id); };
             dd.appendChild(deleteBtn);
-
             document.body.appendChild(dd);
             const rect = event.target.getBoundingClientRect();
             dd.style.left = Math.min(rect.left, window.innerWidth - 150) + "px";
             dd.style.top = (rect.bottom + 4) + "px";
             activeDropdown = dd;
-
             setTimeout(() => {
                 document.addEventListener("click", function handler(e) {
                     if (!dd.contains(e.target)) {
@@ -1445,12 +1442,6 @@
             backdrop.classList.toggle("show");
             document.body.classList.toggle("sidebar-open");
             localStorage.setItem("omni_sidebar", sidebar.classList.contains("open") ? "1" : "0");
-        }
-        function openSidebar() {
-            sidebar.classList.add("open");
-            backdrop.classList.add("show");
-            document.body.classList.add("sidebar-open");
-            localStorage.setItem("omni_sidebar", "1");
         }
         function closeSidebar() {
             sidebar.classList.remove("open");
@@ -1471,10 +1462,7 @@
         ============================================================ */
         function downloadChat() {
             const c = getCurrent();
-            if (!c || !c.messages.length) {
-                alert("Nothing to download yet.");
-                return;
-            }
+            if (!c || !c.messages.length) { alert("Nothing to download yet."); return; }
             let content = `${c.title}\n${new Date(c.createdAt).toLocaleString()}\n\n`;
             c.messages.forEach(m => {
                 content += `[${m.role === "user" ? "You" : "Omni"}]\n${m.text}\n\n`;
@@ -1497,11 +1485,15 @@
                 "Sidebar:\n" +
                 "• Click a chat to switch to it\n" +
                 "• Double-click a title to rename\n" +
-                "• Click ⋯ for rename / delete"
+                "• Click ⋯ for rename / delete\n\n" +
+                "Message actions (icons):\n" +
+                "• Copy — copy the message\n" +
+                "• Edit — edit your message\n" +
+                "• Regenerate — ask again for a new reply"
             );
         }
         function showAbout() {
-            alert("Omni — Your hybrid AI\n\nA modern, streaming AI chatbot.\nBuilt with HTML, CSS, JS, Node.js, DeepSeek, and Gemini.\n\nVersion 1.1");
+            alert("Omni — Your hybrid AI\n\nA modern, streaming AI chatbot.\nBuilt with HTML, CSS, JS, Node.js, DeepSeek, and Gemini.\n\nVersion 1.2");
         }
         function clearData() {
             if (!confirm("This will erase ALL your chats and settings. Continue?")) return;
@@ -1533,7 +1525,6 @@
         function setStatus(state) {
             statusEl.className = "status" + (state === "busy" ? " busy" : state === "error" ? " error" : "");
         }
-
         function renderBot(text) {
             return marked.parse(text).replace(/<script[\s\S]*?<\/script>/gi, "");
         }
@@ -1541,6 +1532,41 @@
         /* ============================================================
            RENDER MESSAGES
         ============================================================ */
+        function buildActions(role, textGetter, opts = {}) {
+            const actions = document.createElement("div");
+            actions.className = "actions";
+
+            // Copy
+            actions.appendChild(makeBtn({
+                icon: "copy",
+                title: "Copy",
+                onClick: (e) => {
+                    navigator.clipboard.writeText(textGetter());
+                    const btn = e.currentTarget;
+                    btn.classList.add("copied");
+                    setTimeout(() => btn.classList.remove("copied"), 900);
+                }
+            }));
+
+            if (role === "bot" && !opts.noRegen) {
+                actions.appendChild(makeBtn({
+                    icon: "refresh",
+                    title: "Regenerate",
+                    onClick: () => regenerate()
+                }));
+            }
+
+            if (role === "user" && typeof opts.index === "number") {
+                actions.appendChild(makeBtn({
+                    icon: "pencil",
+                    title: "Edit",
+                    onClick: () => startEdit(opts.wrap, opts.index)
+                }));
+            }
+
+            return actions;
+        }
+
         function addMsg(text, role, opts = {}) {
             const wrap = document.createElement("div");
             wrap.className = "msg-wrap " + (role === "user" ? "user" : "bot");
@@ -1552,35 +1578,13 @@
             else div.textContent = text;
             wrap.appendChild(div);
 
-            const actions = document.createElement("div");
-            actions.className = "actions";
-
-            const copyBtn = document.createElement("button");
-            copyBtn.className = "action-btn";
-            copyBtn.textContent = "Copy";
-            copyBtn.onclick = () => {
-                navigator.clipboard.writeText(div.innerText || div.textContent);
-                copyBtn.textContent = "Copied";
-                setTimeout(() => (copyBtn.textContent = "Copy"), 1200);
-            };
-            actions.appendChild(copyBtn);
-
-            if (role === "bot" && !opts.noRegen) {
-                const regen = document.createElement("button");
-                regen.className = "action-btn";
-                regen.textContent = "Regenerate";
-                regen.onclick = () => regenerate();
-                actions.appendChild(regen);
-            }
-            if (role === "user" && typeof opts.index === "number") {
-                const edit = document.createElement("button");
-                edit.className = "action-btn";
-                edit.textContent = "Edit";
-                edit.onclick = () => startEdit(wrap, opts.index);
-                actions.appendChild(edit);
-            }
-
+            const actions = buildActions(role, () => div.innerText || div.textContent, {
+                index: opts.index,
+                noRegen: opts.noRegen,
+                wrap
+            });
             wrap.appendChild(actions);
+
             chat.appendChild(wrap);
             chat.scrollTop = chat.scrollHeight;
             return { wrap, div };
@@ -1634,23 +1638,14 @@
         function renderAll() {
             const c = getCurrent();
             currentTitle.textContent = c?.title || "Omni";
-            if (!c || !c.messages.length) {
-                showWelcome();
-                return;
-            }
+            if (!c || !c.messages.length) { showWelcome(); return; }
             chat.innerHTML = "";
             c.messages.forEach((m, i) => addMsg(m.text, m.role, { index: i }));
         }
 
-        function setSendState(state) {
-            sendBtn.classList.toggle("stopping", state === "stop");
-        }
-        function handleSendClick() {
-            if (streaming) stopStreaming(); else send();
-        }
-        function stopStreaming() {
-            if (currentController) currentController.abort();
-        }
+        function setSendState(state) { sendBtn.classList.toggle("stopping", state === "stop"); }
+        function handleSendClick() { if (streaming) stopStreaming(); else send(); }
+        function stopStreaming() { if (currentController) currentController.abort(); }
 
         /* ============================================================
            EDIT IN PLACE
@@ -1686,10 +1681,7 @@
             saveBtn.textContent = "Save";
             saveBtn.onclick = () => {
                 const newText = ta.value.trim();
-                if (newText) {
-                    c.messages[index].text = newText;
-                    touchCurrent();
-                }
+                if (newText) { c.messages[index].text = newText; touchCurrent(); }
                 renderAll();
             };
 
@@ -1764,22 +1756,7 @@
             if (!last || !last.classList.contains("msg-wrap")) return;
             if (!last.querySelector(".actions")) {
                 const finalDiv = last.querySelector(".msg");
-                const actions = document.createElement("div");
-                actions.className = "actions";
-                const copyBtn = document.createElement("button");
-                copyBtn.className = "action-btn";
-                copyBtn.textContent = "Copy";
-                copyBtn.onclick = () => {
-                    navigator.clipboard.writeText(finalDiv.innerText);
-                    copyBtn.textContent = "Copied";
-                    setTimeout(() => (copyBtn.textContent = "Copy"), 1200);
-                };
-                actions.appendChild(copyBtn);
-                const regen = document.createElement("button");
-                regen.className = "action-btn";
-                regen.textContent = "Regenerate";
-                regen.onclick = () => regenerate();
-                actions.appendChild(regen);
+                const actions = buildActions("bot", () => finalDiv.innerText);
                 last.appendChild(actions);
             }
         }
@@ -1843,10 +1820,7 @@
             const c = getCurrent();
             if (!c || !c.messages.length) return;
             const last = c.messages[c.messages.length - 1];
-            if (last.role === "bot") {
-                c.messages.pop();
-                touchCurrent();
-            }
+            if (last.role === "bot") { c.messages.pop(); touchCurrent(); }
             renderAll();
             streaming = true;
             setSendState("stop");
@@ -1872,7 +1846,6 @@
         function newChat(fromSidebar = false) {
             if (streaming) return;
             const c = getCurrent();
-            // If current chat is empty, just stay on it
             if (c && c.messages.length === 0) {
                 input.focus();
                 if (fromSidebar) closeSidebarIfMobile();
@@ -1892,10 +1865,7 @@
 
         input.addEventListener("input", autoResize);
         input.addEventListener("keydown", e => {
-            if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                if (!streaming) send();
-            }
+            if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); if (!streaming) send(); }
         });
         input.addEventListener("focus", () => {
             setTimeout(() => {

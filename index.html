@@ -180,51 +180,73 @@
             padding: 6px 8px;
         }
 
+        .sidebar-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .sidebar-list::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+
         .sidebar-section-label {
             font-size: 11px;
             color: var(--muted);
-            padding: 10px 8px 4px;
+            padding: 12px 8px 4px;
             text-transform: uppercase;
             letter-spacing: 0.05em;
             font-weight: 600;
         }
 
-        .sidebar-item {
-            padding: 9px 12px;
+        .conv-item {
+            padding: 9px 10px;
             border-radius: 8px;
             cursor: pointer;
             font-size: 13px;
             color: var(--text);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
             display: flex;
             align-items: center;
             gap: 8px;
             transition: background 0.1s;
+            position: relative;
         }
 
-        .sidebar-item:hover {
+        .conv-item:hover {
             background: var(--bot-bg);
         }
 
-        .sidebar-item.active {
+        .conv-item.active {
             background: var(--bot-bg);
             font-weight: 500;
         }
 
-        .sidebar-item svg {
-            width: 14px;
-            height: 14px;
-            flex-shrink: 0;
-            color: var(--muted);
-        }
-
-        .sidebar-item .item-title {
+        .conv-item .conv-title {
             flex: 1;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+        }
+
+        .conv-item .conv-menu {
+            background: transparent;
+            border: none;
+            color: var(--muted);
+            cursor: pointer;
+            font-size: 16px;
+            line-height: 1;
+            padding: 0 4px;
+            border-radius: 4px;
+            opacity: 0;
+            transition: opacity 0.15s;
+        }
+
+        .conv-item:hover .conv-menu {
+            opacity: 1;
+        }
+
+        .conv-item .conv-menu:hover {
+            color: var(--text);
+            background: var(--border);
         }
 
         .sidebar-empty {
@@ -241,8 +263,19 @@
         }
 
         .sidebar-footer .sidebar-item {
+            padding: 9px 12px;
+            border-radius: 8px;
+            cursor: pointer;
             font-size: 13px;
             color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.1s;
+        }
+
+        .sidebar-footer .sidebar-item:hover {
+            background: var(--bot-bg);
         }
 
         .sidebar-footer .sidebar-item.danger:hover {
@@ -250,7 +283,50 @@
             color: var(--danger);
         }
 
-        /* Backdrop for mobile */
+        .sidebar-footer svg {
+            width: 14px;
+            height: 14px;
+            flex-shrink: 0;
+            color: var(--muted);
+        }
+
+        /* Small dropdown menu */
+        .conv-dropdown {
+            position: fixed;
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+            padding: 4px;
+            z-index: 200;
+            min-width: 130px;
+            font-size: 13px;
+        }
+
+        .conv-dropdown button {
+            display: block;
+            width: 100%;
+            text-align: left;
+            background: transparent;
+            border: none;
+            color: var(--text);
+            padding: 8px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 13px;
+        }
+
+        .conv-dropdown button:hover {
+            background: var(--bot-bg);
+        }
+
+        .conv-dropdown button.danger:hover {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+        }
+
+        /* Backdrop */
         .backdrop {
             position: fixed;
             inset: 0;
@@ -967,7 +1043,6 @@
 
 <body>
 
-    <!-- Splash -->
     <div id="splash">
         <img src="/logo.png" alt="Omni" class="splash-logo" onerror="this.src='/favicon.png'">
         <div class="splash-name">Omni</div>
@@ -975,10 +1050,8 @@
         <div class="splash-dots"><span></span><span></span><span></span></div>
     </div>
 
-    <!-- Backdrop for mobile -->
     <div class="backdrop" id="backdrop" onclick="closeSidebar()"></div>
 
-    <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <img src="/favicon-32x32.png" alt="Omni" class="logo-img">
@@ -992,7 +1065,7 @@
             </button>
         </div>
 
-        <button class="sidebar-newchat" onclick="newChat(); closeSidebarIfMobile();">
+        <button class="sidebar-newchat" onclick="newChat(true); closeSidebarIfMobile();">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"
                 stroke-linejoin="round">
                 <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -1001,13 +1074,7 @@
             New chat
         </button>
 
-        <div class="sidebar-list" id="sidebarList">
-            <div class="sidebar-section-label">Recent</div>
-            <div class="sidebar-empty">
-                Chat history coming in Phase 2.<br>
-                For now, only the current chat exists.
-            </div>
-        </div>
+        <div class="sidebar-list" id="sidebarList"></div>
 
         <div class="sidebar-footer">
             <div class="sidebar-item" onclick="downloadChat()">
@@ -1049,7 +1116,6 @@
         </div>
     </aside>
 
-    <!-- Main app -->
     <div class="app">
         <header>
             <div class="header-left">
@@ -1064,7 +1130,7 @@
                 <div class="brand">
                     <img src="/favicon-32x32.png" alt="Omni" class="logo-img">
                     <div>
-                        <h1>Omni</h1>
+                        <h1 id="currentTitle">Omni</h1>
                         <div class="tag">Your hybrid AI</div>
                     </div>
                 </div>
@@ -1116,12 +1182,264 @@
         const statusEl = document.getElementById("status");
         const sidebar = document.getElementById("sidebar");
         const backdrop = document.getElementById("backdrop");
+        const sidebarList = document.getElementById("sidebarList");
+        const currentTitle = document.getElementById("currentTitle");
 
-        let history = JSON.parse(localStorage.getItem("omni_history") || "[]");
         let streaming = false;
         let currentController = null;
 
-        /* ---------- Sidebar ---------- */
+        /* ============================================================
+           DATA MODEL
+           - conversations: [{ id, title, messages: [{role,text}], createdAt, updatedAt }]
+           - currentId: string | null
+        ============================================================ */
+        let conversations = [];
+        let currentId = null;
+
+        function genId() {
+            return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+        }
+
+        function loadData() {
+            // Try new format first
+            const raw = localStorage.getItem("omni_conversations");
+            if (raw) {
+                try {
+                    conversations = JSON.parse(raw);
+                    currentId = localStorage.getItem("omni_current_id") || null;
+                } catch {
+                    conversations = [];
+                }
+            }
+
+            // Migrate old single-chat format
+            const oldHistory = localStorage.getItem("omni_history");
+            if (oldHistory) {
+                try {
+                    const msgs = JSON.parse(oldHistory);
+                    if (Array.isArray(msgs) && msgs.length) {
+                        const conv = {
+                            id: genId(),
+                            title: makeTitleFromMessages(msgs),
+                            messages: msgs.map(m => ({ role: m.role, text: m.text })),
+                            createdAt: Date.now(),
+                            updatedAt: Date.now()
+                        };
+                        conversations.unshift(conv);
+                        if (!currentId) currentId = conv.id;
+                        saveData();
+                    }
+                } catch { }
+                localStorage.removeItem("omni_history");
+            }
+
+            // If nothing, start fresh
+            if (!conversations.length) {
+                createConversation(false);
+            }
+
+            // If currentId is invalid, pick the first
+            if (!conversations.find(c => c.id === currentId)) {
+                currentId = conversations[0].id;
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem("omni_conversations", JSON.stringify(conversations));
+            if (currentId) localStorage.setItem("omni_current_id", currentId);
+        }
+
+        function getCurrent() {
+            return conversations.find(c => c.id === currentId) || null;
+        }
+
+        function makeTitleFromMessages(msgs) {
+            const firstUser = msgs.find(m => m.role === "user");
+            if (!firstUser || !firstUser.text) return "New chat";
+            let t = firstUser.text.trim().replace(/\s+/g, " ");
+            if (t.length > 40) t = t.slice(0, 40) + "…";
+            return t || "New chat";
+        }
+
+        function createConversation(makeCurrent = true) {
+            const conv = {
+                id: genId(),
+                title: "New chat",
+                messages: [],
+                createdAt: Date.now(),
+                updatedAt: Date.now()
+            };
+            conversations.unshift(conv);
+            if (makeCurrent) currentId = conv.id;
+            saveData();
+            return conv;
+        }
+
+        function touchCurrent() {
+            const c = getCurrent();
+            if (!c) return;
+            c.updatedAt = Date.now();
+            // Auto-title from first user message
+            if (c.title === "New chat") {
+                c.title = makeTitleFromMessages(c.messages);
+            }
+            saveData();
+        }
+
+        /* ============================================================
+           SIDEBAR RENDER
+        ============================================================ */
+        function groupByDate(list) {
+            const now = new Date();
+            const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+            const startOfYesterday = startOfToday - 86400000;
+            const sevenDaysAgo = startOfToday - 7 * 86400000;
+
+            const groups = { Today: [], Yesterday: [], "Previous 7 days": [], Older: [] };
+            for (const c of list) {
+                const t = c.updatedAt || c.createdAt || 0;
+                if (t >= startOfToday) groups.Today.push(c);
+                else if (t >= startOfYesterday) groups.Yesterday.push(c);
+                else if (t >= sevenDaysAgo) groups["Previous 7 days"].push(c);
+                else groups.Older.push(c);
+            }
+            return groups;
+        }
+
+        function renderSidebar() {
+            sidebarList.innerHTML = "";
+            if (!conversations.length) {
+                sidebarList.innerHTML = '<div class="sidebar-empty">No conversations yet.<br>Start a new chat to begin.</div>';
+                return;
+            }
+
+            const sorted = [...conversations].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+            const groups = groupByDate(sorted);
+
+            for (const [label, items] of Object.entries(groups)) {
+                if (!items.length) continue;
+                const labelEl = document.createElement("div");
+                labelEl.className = "sidebar-section-label";
+                labelEl.textContent = label;
+                sidebarList.appendChild(labelEl);
+
+                for (const c of items) {
+                    const item = document.createElement("div");
+                    item.className = "conv-item" + (c.id === currentId ? " active" : "");
+
+                    const title = document.createElement("div");
+                    title.className = "conv-title";
+                    title.textContent = c.title || "New chat";
+                    item.appendChild(title);
+
+                    const menu = document.createElement("button");
+                    menu.className = "conv-menu";
+                    menu.textContent = "⋯";
+                    menu.title = "Options";
+                    menu.onclick = (e) => {
+                        e.stopPropagation();
+                        showConvMenu(e, c.id);
+                    };
+                    item.appendChild(menu);
+
+                    item.onclick = () => {
+                        switchTo(c.id);
+                        closeSidebarIfMobile();
+                    };
+
+                    // Double-click to rename
+                    title.ondblclick = (e) => {
+                        e.stopPropagation();
+                        renameConversation(c.id);
+                    };
+
+                    sidebarList.appendChild(item);
+                }
+            }
+        }
+
+        function switchTo(id) {
+            if (streaming) return;
+            if (id === currentId) return;
+            currentId = id;
+            saveData();
+            renderAll();
+            renderSidebar();
+        }
+
+        function renameConversation(id) {
+            const c = conversations.find(x => x.id === id);
+            if (!c) return;
+            const name = prompt("Rename conversation:", c.title || "New chat");
+            if (name === null) return;
+            c.title = (name.trim() || "New chat").slice(0, 80);
+            c.updatedAt = Date.now();
+            saveData();
+            renderSidebar();
+            if (id === currentId) currentTitle.textContent = c.title;
+        }
+
+        function deleteConversation(id) {
+            const c = conversations.find(x => x.id === id);
+            if (!c) return;
+            if (!confirm(`Delete "${c.title}"? This cannot be undone.`)) return;
+            conversations = conversations.filter(x => x.id !== id);
+            if (currentId === id) {
+                if (conversations.length) {
+                    currentId = conversations[0].id;
+                } else {
+                    createConversation(false);
+                    currentId = conversations[0].id;
+                }
+            }
+            saveData();
+            renderAll();
+            renderSidebar();
+        }
+
+        /* Small dropdown menu for ⋯ */
+        let activeDropdown = null;
+        function closeDropdown() {
+            if (activeDropdown) {
+                activeDropdown.remove();
+                activeDropdown = null;
+            }
+        }
+        function showConvMenu(event, id) {
+            closeDropdown();
+            const dd = document.createElement("div");
+            dd.className = "conv-dropdown";
+
+            const renameBtn = document.createElement("button");
+            renameBtn.textContent = "Rename";
+            renameBtn.onclick = () => { closeDropdown(); renameConversation(id); };
+            dd.appendChild(renameBtn);
+
+            const deleteBtn = document.createElement("button");
+            deleteBtn.className = "danger";
+            deleteBtn.textContent = "Delete";
+            deleteBtn.onclick = () => { closeDropdown(); deleteConversation(id); };
+            dd.appendChild(deleteBtn);
+
+            document.body.appendChild(dd);
+            const rect = event.target.getBoundingClientRect();
+            dd.style.left = Math.min(rect.left, window.innerWidth - 150) + "px";
+            dd.style.top = (rect.bottom + 4) + "px";
+            activeDropdown = dd;
+
+            setTimeout(() => {
+                document.addEventListener("click", function handler(e) {
+                    if (!dd.contains(e.target)) {
+                        closeDropdown();
+                        document.removeEventListener("click", handler);
+                    }
+                });
+            }, 0);
+        }
+
+        /* ============================================================
+           SIDEBAR OPEN/CLOSE
+        ============================================================ */
         function toggleSidebar() {
             sidebar.classList.toggle("open");
             backdrop.classList.toggle("show");
@@ -1143,27 +1461,29 @@
         function closeSidebarIfMobile() {
             if (window.innerWidth < 720) closeSidebar();
         }
-        // Restore sidebar state on wide screens
         if (localStorage.getItem("omni_sidebar") === "1" && window.innerWidth >= 720) {
             sidebar.classList.add("open");
             document.body.classList.add("sidebar-open");
         }
 
-        /* ---------- Footer actions ---------- */
+        /* ============================================================
+           FOOTER ACTIONS
+        ============================================================ */
         function downloadChat() {
-            if (!history.length) {
+            const c = getCurrent();
+            if (!c || !c.messages.length) {
                 alert("Nothing to download yet.");
                 return;
             }
-            let content = `Omni Chat — ${new Date().toLocaleString()}\n\n`;
-            history.forEach(m => {
+            let content = `${c.title}\n${new Date(c.createdAt).toLocaleString()}\n\n`;
+            c.messages.forEach(m => {
                 content += `[${m.role === "user" ? "You" : "Omni"}]\n${m.text}\n\n`;
             });
             const blob = new Blob([content], { type: "text/plain" });
             const url = URL.createObjectURL(blob);
             const a = document.createElement("a");
             a.href = url;
-            a.download = `omni-chat-${Date.now()}.txt`;
+            a.download = `omni-${(c.title || "chat").replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-${Date.now()}.txt`;
             a.click();
             URL.revokeObjectURL(url);
         }
@@ -1174,29 +1494,28 @@
                 "• Shift+Enter for a new line\n" +
                 "• Esc to stop streaming\n" +
                 "• Ctrl+K for a new chat\n\n" +
-                "Each message has Copy and Edit buttons.\n" +
-                "Bot replies have Copy and Regenerate."
+                "Sidebar:\n" +
+                "• Click a chat to switch to it\n" +
+                "• Double-click a title to rename\n" +
+                "• Click ⋯ for rename / delete"
             );
         }
         function showAbout() {
-            alert(
-                "Omni — Your hybrid AI\n\n" +
-                "A modern, streaming AI chatbot.\n" +
-                "Built with HTML, CSS, JS, Node.js,\n" +
-                "DeepSeek, and Gemini.\n\n" +
-                "Version 1.0"
-            );
+            alert("Omni — Your hybrid AI\n\nA modern, streaming AI chatbot.\nBuilt with HTML, CSS, JS, Node.js, DeepSeek, and Gemini.\n\nVersion 1.1");
         }
         function clearData() {
-            if (!confirm("This will erase all your chats and settings. Continue?")) return;
+            if (!confirm("This will erase ALL your chats and settings. Continue?")) return;
+            localStorage.removeItem("omni_conversations");
+            localStorage.removeItem("omni_current_id");
             localStorage.removeItem("omni_history");
             localStorage.removeItem("omni_theme");
             localStorage.removeItem("omni_sidebar");
-            history = [];
             location.reload();
         }
 
-        /* ---------- Theme ---------- */
+        /* ============================================================
+           THEME
+        ============================================================ */
         function applyTheme(theme) {
             document.documentElement.setAttribute("data-theme", theme);
             document.getElementById("themeIcon").innerHTML = theme === "dark"
@@ -1214,14 +1533,14 @@
         function setStatus(state) {
             statusEl.className = "status" + (state === "busy" ? " busy" : state === "error" ? " error" : "");
         }
-        function saveHistory() {
-            localStorage.setItem("omni_history", JSON.stringify(history));
-        }
+
         function renderBot(text) {
             return marked.parse(text).replace(/<script[\s\S]*?<\/script>/gi, "");
         }
 
-        /* ---------- Messages ---------- */
+        /* ============================================================
+           RENDER MESSAGES
+        ============================================================ */
         function addMsg(text, role, opts = {}) {
             const wrap = document.createElement("div");
             wrap.className = "msg-wrap " + (role === "user" ? "user" : "bot");
@@ -1253,7 +1572,6 @@
                 regen.onclick = () => regenerate();
                 actions.appendChild(regen);
             }
-
             if (role === "user" && typeof opts.index === "number") {
                 const edit = document.createElement("button");
                 edit.className = "action-btn";
@@ -1312,11 +1630,18 @@
             autoResize();
             send();
         }
+
         function renderAll() {
-            if (!history.length) { showWelcome(); return; }
+            const c = getCurrent();
+            currentTitle.textContent = c?.title || "Omni";
+            if (!c || !c.messages.length) {
+                showWelcome();
+                return;
+            }
             chat.innerHTML = "";
-            history.forEach((m, i) => addMsg(m.text, m.role, { index: i }));
+            c.messages.forEach((m, i) => addMsg(m.text, m.role, { index: i }));
         }
+
         function setSendState(state) {
             sendBtn.classList.toggle("stopping", state === "stop");
         }
@@ -1327,14 +1652,17 @@
             if (currentController) currentController.abort();
         }
 
-        /* ---------- Edit in place ---------- */
+        /* ============================================================
+           EDIT IN PLACE
+        ============================================================ */
         function startEdit(wrap, index) {
             if (streaming) return;
-            const m = history[index];
+            const c = getCurrent();
+            if (!c) return;
+            const m = c.messages[index];
             if (!m || m.role !== "user") return;
 
             const originalHTML = wrap.innerHTML;
-
             const msgDiv = wrap.querySelector(".msg");
             const actionsDiv = wrap.querySelector(".actions");
 
@@ -1359,8 +1687,8 @@
             saveBtn.onclick = () => {
                 const newText = ta.value.trim();
                 if (newText) {
-                    history[index].text = newText;
-                    saveHistory();
+                    c.messages[index].text = newText;
+                    touchCurrent();
                 }
                 renderAll();
             };
@@ -1388,13 +1716,16 @@
             ta.style.height = Math.min(ta.scrollHeight, 200) + "px";
         }
 
-        /* ---------- Streaming ---------- */
+        /* ============================================================
+           STREAMING SEND
+        ============================================================ */
         async function streamReply() {
             currentController = new AbortController();
+            const c = getCurrent();
             const res = await fetch("/chat", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ messages: history }),
+                body: JSON.stringify({ messages: c.messages }),
                 signal: currentController.signal
             });
             if (!res.ok || !res.body) {
@@ -1457,21 +1788,27 @@
             if (streaming) return;
             const text = input.value.trim();
             if (!text) return;
-            if (history.length === 0) chat.innerHTML = "";
 
-            addMsg(text, "user", { index: history.length });
+            const c = getCurrent();
+            if (!c) { createConversation(true); return send(); }
+
+            if (c.messages.length === 0) chat.innerHTML = "";
+
+            addMsg(text, "user", { index: c.messages.length });
             input.value = "";
             autoResize();
             streaming = true;
             setSendState("stop");
-            history.push({ role: "user", text });
-            saveHistory();
+            c.messages.push({ role: "user", text });
+            touchCurrent();
+            renderSidebar();
             setStatus("busy");
 
             try {
                 const reply = await streamReply();
-                history.push({ role: "bot", text: reply });
-                saveHistory();
+                c.messages.push({ role: "bot", text: reply });
+                touchCurrent();
+                renderSidebar();
                 finalizeStreamedMsg();
                 setStatus("online");
             } catch (err) {
@@ -1482,8 +1819,9 @@
                     const pd = pw?.querySelector(".msg");
                     const pt = pd?.innerText?.trim() || "";
                     if (pt && pt !== "...") {
-                        history.push({ role: "bot", text: pt + "\n\n_(stopped)_" });
-                        saveHistory();
+                        c.messages.push({ role: "bot", text: pt + "\n\n_(stopped)_" });
+                        touchCurrent();
+                        renderSidebar();
                         pd.innerHTML = renderBot(pt + "\n\n_(stopped)_");
                         finalizeStreamedMsg();
                     } else pw?.remove();
@@ -1501,17 +1839,23 @@
         }
 
         async function regenerate() {
-            if (streaming || !history.length) return;
-            const last = history[history.length - 1];
-            if (last.role === "bot") { history.pop(); saveHistory(); }
+            if (streaming) return;
+            const c = getCurrent();
+            if (!c || !c.messages.length) return;
+            const last = c.messages[c.messages.length - 1];
+            if (last.role === "bot") {
+                c.messages.pop();
+                touchCurrent();
+            }
             renderAll();
             streaming = true;
             setSendState("stop");
             setStatus("busy");
             try {
                 const reply = await streamReply();
-                history.push({ role: "bot", text: reply });
-                saveHistory();
+                c.messages.push({ role: "bot", text: reply });
+                touchCurrent();
+                renderSidebar();
                 finalizeStreamedMsg();
                 setStatus("online");
             } catch (err) {
@@ -1525,14 +1869,22 @@
             currentController = null;
         }
 
-        function newChat() {
+        function newChat(fromSidebar = false) {
             if (streaming) return;
-            if (history.length && !confirm("Clear this conversation?")) return;
-            history = [];
-            saveHistory();
-            showWelcome();
+            const c = getCurrent();
+            // If current chat is empty, just stay on it
+            if (c && c.messages.length === 0) {
+                input.focus();
+                if (fromSidebar) closeSidebarIfMobile();
+                return;
+            }
+            createConversation(true);
+            renderAll();
+            renderSidebar();
             input.focus();
+            if (fromSidebar) closeSidebarIfMobile();
         }
+
         function autoResize() {
             input.style.height = "auto";
             input.style.height = Math.min(input.scrollHeight, 140) + "px";
@@ -1545,7 +1897,6 @@
                 if (!streaming) send();
             }
         });
-
         input.addEventListener("focus", () => {
             setTimeout(() => {
                 chat.scrollTop = chat.scrollHeight;
@@ -1558,10 +1909,16 @@
             if (mod && e.key.toLowerCase() === "k") { e.preventDefault(); newChat(); return; }
             if (e.key === "Escape") {
                 if (streaming) { e.preventDefault(); stopStreaming(); }
+                else if (activeDropdown) { closeDropdown(); }
                 else if (sidebar.classList.contains("open")) { e.preventDefault(); closeSidebar(); }
             }
         });
 
+        /* ============================================================
+           INIT
+        ============================================================ */
+        loadData();
+        renderSidebar();
         renderAll();
         autoResize();
 

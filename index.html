@@ -471,34 +471,31 @@
             padding: 8px 0 16px;
             display: flex;
             flex-direction: column;
-            gap: 14px;
+            gap: 18px;
         }
 
-        .msg-wrap {
-            position: relative;
+        /* ---------- Message structure ----------
+     Each message is a .msg-block:
+       .msg-block
+         .msg        ← the bubble
+         .actions    ← icons, on their own line, aligned to inner edge
+  -------------------------------------------- */
+        .msg-block {
             display: flex;
             flex-direction: column;
+            animation: fadeIn 0.25s ease-out;
             max-width: 85%;
         }
 
-        .msg-wrap.user {
+        .msg-block.user {
+            align-self: flex-end;
             align-items: flex-end;
-            margin-left: auto;
         }
 
-        .msg-wrap.bot {
+        .msg-block.bot {
+            align-self: flex-start;
             align-items: flex-start;
-            margin-right: auto;
-        }
-
-        .msg {
-            line-height: 1.55;
-            font-size: 15px;
-            word-wrap: break-word;
-            overflow-wrap: break-word;
-            animation: fadeIn 0.25s ease-out;
-            padding: 11px 15px;
-            border-radius: var(--radius);
+            width: 100%;
             max-width: 100%;
         }
 
@@ -514,6 +511,16 @@
             }
         }
 
+        .msg {
+            line-height: 1.55;
+            font-size: 15px;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            padding: 11px 15px;
+            border-radius: var(--radius);
+            max-width: 100%;
+        }
+
         .user {
             background: var(--user-bg);
             color: var(--user-text);
@@ -521,7 +528,6 @@
             white-space: pre-wrap;
             width: fit-content;
             max-width: 100%;
-            margin-left: auto;
         }
 
         .bot {
@@ -532,13 +538,26 @@
             width: 100%;
         }
 
-        /* Actions — Lucide icon buttons */
+        /* ---------- Actions ----------
+     Icons live BELOW the bubble, aligned to the inner edge.
+     They are visually detached — no background, no box.
+  ---------------------------------- */
         .actions {
             display: flex;
-            gap: 2px;
-            margin-top: 4px;
-            padding: 0 2px;
+            gap: 0;
+            margin-top: 2px;
+            padding: 0;
             opacity: 1;
+        }
+
+        .msg-block.user .actions {
+            justify-content: flex-end;
+            padding-right: 4px;
+        }
+
+        .msg-block.bot .actions {
+            justify-content: flex-start;
+            padding-left: 4px;
         }
 
         .action-btn {
@@ -554,11 +573,13 @@
             align-items: center;
             justify-content: center;
             transition: background 0.15s, color 0.15s, transform 0.1s;
+            opacity: 0.75;
         }
 
         .action-btn:hover {
             background: var(--icon-hover-bg);
             color: var(--text);
+            opacity: 1;
         }
 
         .action-btn:active {
@@ -566,13 +587,14 @@
         }
 
         .action-btn svg {
-            width: 16px;
-            height: 16px;
+            width: 15px;
+            height: 15px;
             display: block;
         }
 
         .action-btn.copied {
             color: var(--accent);
+            opacity: 1;
         }
 
         .edit-box {
@@ -1052,7 +1074,7 @@
                 font-size: 16px;
             }
 
-            .msg-wrap {
+            .msg-block {
                 max-width: 92%;
             }
         }
@@ -1264,12 +1286,8 @@
                 } catch { }
                 localStorage.removeItem("omni_history");
             }
-            if (!conversations.length) {
-                createConversation(false);
-            }
-            if (!conversations.find(c => c.id === currentId)) {
-                currentId = conversations[0].id;
-            }
+            if (!conversations.length) createConversation(false);
+            if (!conversations.find(c => c.id === currentId)) currentId = conversations[0].id;
         }
 
         function saveData() {
@@ -1307,9 +1325,7 @@
             const c = getCurrent();
             if (!c) return;
             c.updatedAt = Date.now();
-            if (c.title === "New chat") {
-                c.title = makeTitleFromMessages(c.messages);
-            }
+            if (c.title === "New chat") c.title = makeTitleFromMessages(c.messages);
             saveData();
         }
 
@@ -1321,7 +1337,6 @@
             const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
             const startOfYesterday = startOfToday - 86400000;
             const sevenDaysAgo = startOfToday - 7 * 86400000;
-
             const groups = { Today: [], Yesterday: [], "Previous 7 days": [], Older: [] };
             for (const c of list) {
                 const t = c.updatedAt || c.createdAt || 0;
@@ -1486,14 +1501,14 @@
                 "• Click a chat to switch to it\n" +
                 "• Double-click a title to rename\n" +
                 "• Click ⋯ for rename / delete\n\n" +
-                "Message actions (icons):\n" +
+                "Message actions (icons below each message):\n" +
                 "• Copy — copy the message\n" +
                 "• Edit — edit your message\n" +
                 "• Regenerate — ask again for a new reply"
             );
         }
         function showAbout() {
-            alert("Omni — Your hybrid AI\n\nA modern, streaming AI chatbot.\nBuilt with HTML, CSS, JS, Node.js, DeepSeek, and Gemini.\n\nVersion 1.2");
+            alert("Omni — Your hybrid AI\n\nA modern, streaming AI chatbot.\nBuilt with HTML, CSS, JS, Node.js, DeepSeek, and Gemini.\n\nVersion 1.3");
         }
         function clearData() {
             if (!confirm("This will erase ALL your chats and settings. Continue?")) return;
@@ -1536,7 +1551,6 @@
             const actions = document.createElement("div");
             actions.className = "actions";
 
-            // Copy
             actions.appendChild(makeBtn({
                 icon: "copy",
                 title: "Copy",
@@ -1560,7 +1574,7 @@
                 actions.appendChild(makeBtn({
                     icon: "pencil",
                     title: "Edit",
-                    onClick: () => startEdit(opts.wrap, opts.index)
+                    onClick: () => startEdit(opts.block, opts.index)
                 }));
             }
 
@@ -1568,38 +1582,38 @@
         }
 
         function addMsg(text, role, opts = {}) {
-            const wrap = document.createElement("div");
-            wrap.className = "msg-wrap " + (role === "user" ? "user" : "bot");
-            wrap.dataset.index = opts.index;
+            const block = document.createElement("div");
+            block.className = "msg-block " + (role === "user" ? "user" : "bot");
+            block.dataset.index = opts.index;
 
             const div = document.createElement("div");
             div.className = "msg " + (role === "user" ? "user" : "bot");
             if (role === "bot") div.innerHTML = renderBot(text);
             else div.textContent = text;
-            wrap.appendChild(div);
+            block.appendChild(div);
 
             const actions = buildActions(role, () => div.innerText || div.textContent, {
                 index: opts.index,
                 noRegen: opts.noRegen,
-                wrap
+                block
             });
-            wrap.appendChild(actions);
+            block.appendChild(actions);
 
-            chat.appendChild(wrap);
+            chat.appendChild(block);
             chat.scrollTop = chat.scrollHeight;
-            return { wrap, div };
+            return { block, div };
         }
 
         function addStreamingMsg() {
-            const wrap = document.createElement("div");
-            wrap.className = "msg-wrap bot";
+            const block = document.createElement("div");
+            block.className = "msg-block bot";
             const div = document.createElement("div");
             div.className = "msg bot";
             div.innerHTML = '<div class="dots"><span></span><span></span><span></span></div>';
-            wrap.appendChild(div);
-            chat.appendChild(wrap);
+            block.appendChild(div);
+            chat.appendChild(block);
             chat.scrollTop = chat.scrollHeight;
-            return { wrap, div };
+            return { block, div };
         }
 
         function showWelcome() {
@@ -1650,16 +1664,16 @@
         /* ============================================================
            EDIT IN PLACE
         ============================================================ */
-        function startEdit(wrap, index) {
+        function startEdit(block, index) {
             if (streaming) return;
             const c = getCurrent();
             if (!c) return;
             const m = c.messages[index];
             if (!m || m.role !== "user") return;
 
-            const originalHTML = wrap.innerHTML;
-            const msgDiv = wrap.querySelector(".msg");
-            const actionsDiv = wrap.querySelector(".actions");
+            const originalHTML = block.innerHTML;
+            const msgDiv = block.querySelector(".msg");
+            const actionsDiv = block.querySelector(".actions");
 
             const editWrap = document.createElement("div");
             editWrap.style.width = "100%";
@@ -1674,7 +1688,7 @@
             const cancelBtn = document.createElement("button");
             cancelBtn.className = "cancel-btn";
             cancelBtn.textContent = "Cancel";
-            cancelBtn.onclick = () => { wrap.innerHTML = originalHTML; };
+            cancelBtn.onclick = () => { block.innerHTML = originalHTML; };
 
             const saveBtn = document.createElement("button");
             saveBtn.className = "save-btn";
@@ -1753,7 +1767,7 @@
 
         function finalizeStreamedMsg() {
             const last = chat.lastElementChild;
-            if (!last || !last.classList.contains("msg-wrap")) return;
+            if (!last || !last.classList.contains("msg-block")) return;
             if (!last.querySelector(".actions")) {
                 const finalDiv = last.querySelector(".msg");
                 const actions = buildActions("bot", () => finalDiv.innerText);

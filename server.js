@@ -23,6 +23,74 @@ console.log(`[ENV] DeepSeek key: ${DEEPSEEK_KEY ? "present (" + DEEPSEEK_KEY.len
 console.log(`[ENV] Gemini key: ${GEMINI_KEY ? "present (" + GEMINI_KEY.length + " chars)" : "MISSING"}`);
 
 // ============================================================
+// RATE LIMITER (in-memory)
+// ============================================================
+const RATE_LIMITS = {
+    perIpPerHour: 20,
+    perIpPerMinute: 4,
+    globalPerDay: 300
+};
+
+const ipUsage = new Map();
+let globalCount = 0;
+let globalResetAt = Date.now() + 24 * 60 * 60 * 1000;
+
+function getClientIp(req) {
+    return (req.headers["x-forwarded-for"]?.split(",")[0].trim())
+        || req.socket.remoteAddress
+        || "unknown";
+}
+
+function checkRateLimit(ip) {
+    const now = Date.now();
+    const oneHourAgo = now - 60 * 60 * 1000;
+    const oneMinuteAgo = now - 60 * 1000;
+
+    // Reset global counter after 24h
+    if (now >= globalResetAt) {
+        globalCount = 0;
+        globalResetAt = now + 24 * 60 * 60 * 1000;
+        console.log("[RATE] Global daily counter reset");
+    }
+
+    // Global cap
+    if (globalCount >= RATE_LIMITS.globalPerDay) {
+        return { ok: false, reason: "Daily server limit reached. Please try again tomorrow." };
+    }
+
+    // Per-IP tracking
+    let usage = ipUsage.get(ip) || { timestamps: [] };
+    usage.timestamps = usage.timestamps.filter(t => t > oneHourAgo);
+
+    const lastMinute = usage.timestamps.filter(t => t > oneMinuteAgo);
+    if (lastMinute.length >= RATE_LIMITS.perIpPerMinute) {
+        ipUsage.set(ip, usage);
+        return { ok: false, reason: "Slow down — too many messages per minute." };
+    }
+
+    if (usage.timestamps.length >= RATE_LIMITS.perIpPerHour) {
+        ipUsage.set(ip, usage);
+        return { ok: false, reason: "Hourly limit reached. Please wait a bit and try again." };
+    }
+
+    // Allow
+    usage.timestamps.push(now);
+    ipUsage.set(ip, usage);
+    globalCount++;
+
+    return { ok: true };
+}
+
+// Periodic cleanup — remove stale IP entries every 30 min
+setInterval(() => {
+    const cutoff = Date.now() - 60 * 60 * 1000;
+    for (const [ip, usage] of ipUsage.entries()) {
+        usage.timestamps = usage.timestamps.filter(t => t > cutoff);
+        if (usage.timestamps.length === 0) ipUsage.delete(ip);
+    }
+}, 30 * 60 * 1000);
+
+// ============================================================
 // DEEPSEEK (primary — OpenAI-compatible)
 // ============================================================
 const DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
@@ -51,7 +119,7 @@ async function tryDeepSeek(model, messages, res, timeoutMs = 30000) {
         try {
             const j = JSON.parse(text);
             msg = j.error?.message || msg;
-        } catch {}
+        } catch { }
         const err = new Error(msg);
         err.status = upstream.status;
         throw err;
@@ -83,7 +151,7 @@ async function tryDeepSeek(model, messages, res, timeoutMs = 30000) {
                     sentAny = true;
                     res.write(text);
                 }
-            } catch {}
+            } catch { }
         }
     }
 
@@ -121,7 +189,7 @@ async function tryGemini(model, contents, res, timeoutMs = 20000) {
         try {
             const j = JSON.parse(text);
             msg = j.error?.message || msg;
-        } catch {}
+        } catch { }
         const err = new Error(msg.split("\n")[0].replace(/^\[\d+\]\s*/, ""));
         err.status = upstream.status;
         throw err;
@@ -156,7 +224,7 @@ async function tryGemini(model, contents, res, timeoutMs = 20000) {
                     sentAny = true;
                     res.write(text);
                 }
-            } catch {}
+            } catch { }
         }
     }
 
@@ -166,8 +234,6 @@ async function tryGemini(model, contents, res, timeoutMs = 20000) {
 // ============================================================
 // MESSAGE CONVERTERS
 // ============================================================
-
-// DeepSeek rejects consecutive same-role messages — merge them
 function toDeepSeekMessages(messages) {
     const result = [];
     for (const m of messages) {
@@ -198,6 +264,15 @@ app.post("/chat", async (req, res) => {
         return res.status(400).send("No messages provided.");
     }
 
+    // ---- Rate limit ----
+    const ip = getClientIp(req);
+    const limit = checkRateLimit(ip);
+    if (!limit.ok) {
+        console.log(`[RATE LIMIT] Blocked ${ip}: ${limit.reason}`);
+        return res.status(429).send("Rate limit: " + limit.reason);
+    }
+    // --------------------
+
     res.setHeader("Content-Type", "text/plain; charset=utf-8");
     res.setHeader("Cache-Control", "no-cache, no-transform");
     res.setHeader("X-Accel-Buffering", "no");
@@ -219,7 +294,6 @@ app.post("/chat", async (req, res) => {
             } catch (err) {
                 lastError = err;
                 console.error(`[CHAT] DeepSeek ${model} failed:`, err.message);
-                // Fall through to Gemini
                 break;
             }
         }
@@ -264,7 +338,8 @@ app.get("/", (req, res) => {
     res.json({
         status: `${APP_NAME} backend is running`,
         deepseekKeyLoaded: !!DEEPSEEK_KEY,
-        geminiKeyLoaded: !!GEMINI_KEY
+        geminiKeyLoaded: !!GEMINI_KEY,
+        rateLimits: RATE_LIMITS
     });
 });
 
@@ -274,4 +349,5 @@ app.get("/", (req, res) => {
 const PORT = process.env.PORT || 4789;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`${APP_NAME} running on port ${PORT}`);
+    console.log(`[RATE] Limits: ${RATE_LIMITS.perIpPerHour}/hr per IP, ${RATE_LIMITS.perIpPerMinute}/min per IP, ${RATE_LIMITS.globalPerDay}/day global`);
 });

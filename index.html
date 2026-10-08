@@ -22,13 +22,13 @@
         :root {
             --bg: #f7f7f8;
             --panel: #ffffff;
+            --sidebar-bg: #f0f0f2;
             --border: #e5e5e5;
             --text: #1a1a1a;
             --muted: #8a8a8a;
             --accent: #7c3aed;
             --accent-hover: #6d28d9;
             --danger: #ef4444;
-            --danger-hover: #dc2626;
             --user-bg: #7c3aed;
             --user-text: #ffffff;
             --bot-bg: #f1f1f3;
@@ -38,11 +38,13 @@
             --inline-code-bg: #e5e5e7;
             --shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.06);
             --radius: 14px;
+            --sidebar-width: 260px;
         }
 
         [data-theme="dark"] {
             --bg: #0e0e10;
             --panel: #17171a;
+            --sidebar-bg: #131316;
             --border: #26262b;
             --text: #ececec;
             --muted: #8a8a92;
@@ -77,6 +79,194 @@
             overscroll-behavior: none;
         }
 
+        /* ---------- Sidebar ---------- */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: var(--sidebar-width);
+            background: var(--sidebar-bg);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            z-index: 100;
+            transform: translateX(-100%);
+            transition: transform 0.25s ease;
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .sidebar.open {
+            transform: translateX(0);
+        }
+
+        .sidebar-header {
+            padding: 14px 14px 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .sidebar-header .logo-img {
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            flex-shrink: 0;
+        }
+
+        .sidebar-header .sidebar-title {
+            font-size: 15px;
+            font-weight: 600;
+            flex: 1;
+            letter-spacing: -0.01em;
+        }
+
+        .sidebar-close {
+            background: transparent;
+            border: none;
+            color: var(--muted);
+            cursor: pointer;
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .sidebar-close:hover {
+            background: var(--bot-bg);
+            color: var(--text);
+        }
+
+        .sidebar-close svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .sidebar-newchat {
+            margin: 12px 12px 6px;
+            padding: 10px 14px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: background 0.15s;
+        }
+
+        .sidebar-newchat:hover {
+            background: var(--accent-hover);
+        }
+
+        .sidebar-newchat svg {
+            width: 15px;
+            height: 15px;
+        }
+
+        .sidebar-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 6px 8px;
+        }
+
+        .sidebar-section-label {
+            font-size: 11px;
+            color: var(--muted);
+            padding: 10px 8px 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+        }
+
+        .sidebar-item {
+            padding: 9px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            color: var(--text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.1s;
+        }
+
+        .sidebar-item:hover {
+            background: var(--bot-bg);
+        }
+
+        .sidebar-item.active {
+            background: var(--bot-bg);
+            font-weight: 500;
+        }
+
+        .sidebar-item svg {
+            width: 14px;
+            height: 14px;
+            flex-shrink: 0;
+            color: var(--muted);
+        }
+
+        .sidebar-item .item-title {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .sidebar-empty {
+            padding: 16px 12px;
+            color: var(--muted);
+            font-size: 12px;
+            text-align: center;
+            line-height: 1.5;
+        }
+
+        .sidebar-footer {
+            border-top: 1px solid var(--border);
+            padding: 8px;
+        }
+
+        .sidebar-footer .sidebar-item {
+            font-size: 13px;
+            color: var(--text);
+        }
+
+        .sidebar-footer .sidebar-item.danger:hover {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+        }
+
+        /* Backdrop for mobile */
+        .backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: 99;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.25s, visibility 0.25s;
+        }
+
+        .backdrop.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* ---------- Main app ---------- */
         .app {
             position: fixed;
             inset: 0;
@@ -85,6 +275,11 @@
             padding: 0 12px;
             padding-top: max(12px, env(safe-area-inset-top));
             padding-bottom: max(8px, env(safe-area-inset-bottom));
+            transition: margin-left 0.25s ease;
+        }
+
+        body.sidebar-open .app {
+            margin-left: var(--sidebar-width);
         }
 
         header {
@@ -93,6 +288,15 @@
             justify-content: space-between;
             padding: 8px 0 10px;
             flex-shrink: 0;
+            gap: 8px;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+            flex: 1;
         }
 
         .brand {
@@ -256,12 +460,7 @@
             display: flex;
             gap: 6px;
             margin-top: 6px;
-            opacity: 0;
-            transition: opacity 0.15s;
             padding: 0 4px;
-        }
-
-        .msg-wrap:hover .actions {
             opacity: 1;
         }
 
@@ -273,11 +472,61 @@
             padding: 3px 9px;
             border-radius: 6px;
             cursor: pointer;
+            transition: all 0.15s;
         }
 
         .action-btn:hover {
             color: var(--text);
             border-color: var(--muted);
+            background: var(--bot-bg);
+        }
+
+        .edit-box {
+            width: 100%;
+            background: var(--bg);
+            color: var(--text);
+            border: 1.5px solid var(--accent);
+            border-radius: 10px;
+            padding: 10px 12px;
+            font-family: inherit;
+            font-size: 15px;
+            line-height: 1.5;
+            resize: vertical;
+            outline: none;
+            min-height: 42px;
+            max-height: 200px;
+        }
+
+        .edit-actions {
+            display: flex;
+            gap: 6px;
+            margin-top: 6px;
+            justify-content: flex-end;
+        }
+
+        .edit-actions button {
+            font-size: 12px;
+            padding: 5px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text);
+            font-family: inherit;
+        }
+
+        .edit-actions .save-btn {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        .edit-actions .save-btn:hover {
+            background: var(--accent-hover);
+        }
+
+        .edit-actions .cancel-btn:hover {
+            background: var(--bot-bg);
         }
 
         .bot p {
@@ -669,6 +918,11 @@
                 height: 100dvh;
             }
 
+            body.sidebar-open .app {
+                margin-left: calc(50% - 390px + var(--sidebar-width));
+                max-width: 780px;
+            }
+
             .suggestions {
                 grid-template-columns: 1fr 1fr;
             }
@@ -688,6 +942,10 @@
 
             textarea {
                 font-size: 15px;
+            }
+
+            .sidebar-close {
+                display: none;
             }
         }
 
@@ -709,6 +967,7 @@
 
 <body>
 
+    <!-- Splash -->
     <div id="splash">
         <img src="/logo.png" alt="Omni" class="splash-logo" onerror="this.src='/favicon.png'">
         <div class="splash-name">Omni</div>
@@ -716,13 +975,98 @@
         <div class="splash-dots"><span></span><span></span><span></span></div>
     </div>
 
+    <!-- Backdrop for mobile -->
+    <div class="backdrop" id="backdrop" onclick="closeSidebar()"></div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <img src="/favicon-32x32.png" alt="Omni" class="logo-img">
+            <div class="sidebar-title">Omni</div>
+            <button class="sidebar-close" onclick="closeSidebar()" title="Close">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+
+        <button class="sidebar-newchat" onclick="newChat(); closeSidebarIfMobile();">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"
+                stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            New chat
+        </button>
+
+        <div class="sidebar-list" id="sidebarList">
+            <div class="sidebar-section-label">Recent</div>
+            <div class="sidebar-empty">
+                Chat history coming in Phase 2.<br>
+                For now, only the current chat exists.
+            </div>
+        </div>
+
+        <div class="sidebar-footer">
+            <div class="sidebar-item" onclick="downloadChat()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                <span class="item-title">Download chat</span>
+            </div>
+            <div class="sidebar-item" onclick="showHelp()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+                <span class="item-title">Help</span>
+            </div>
+            <div class="sidebar-item" onclick="showAbout()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                <span class="item-title">About</span>
+            </div>
+            <div class="sidebar-item danger" onclick="clearData()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+                    <path d="M10 11v6M14 11v6"></path>
+                </svg>
+                <span class="item-title">Clear data</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main app -->
     <div class="app">
         <header>
-            <div class="brand">
-                <img src="/favicon-32x32.png" alt="Omni" class="logo-img">
-                <div>
-                    <h1>Omni</h1>
-                    <div class="tag">Your hybrid AI</div>
+            <div class="header-left">
+                <button class="icon-btn" onclick="toggleSidebar()" title="Menu">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+                <div class="brand">
+                    <img src="/favicon-32x32.png" alt="Omni" class="logo-img">
+                    <div>
+                        <h1>Omni</h1>
+                        <div class="tag">Your hybrid AI</div>
+                    </div>
                 </div>
             </div>
             <div class="header-actions">
@@ -770,11 +1114,89 @@
         const input = document.getElementById("input");
         const sendBtn = document.getElementById("send");
         const statusEl = document.getElementById("status");
+        const sidebar = document.getElementById("sidebar");
+        const backdrop = document.getElementById("backdrop");
 
         let history = JSON.parse(localStorage.getItem("omni_history") || "[]");
         let streaming = false;
         let currentController = null;
 
+        /* ---------- Sidebar ---------- */
+        function toggleSidebar() {
+            sidebar.classList.toggle("open");
+            backdrop.classList.toggle("show");
+            document.body.classList.toggle("sidebar-open");
+            localStorage.setItem("omni_sidebar", sidebar.classList.contains("open") ? "1" : "0");
+        }
+        function openSidebar() {
+            sidebar.classList.add("open");
+            backdrop.classList.add("show");
+            document.body.classList.add("sidebar-open");
+            localStorage.setItem("omni_sidebar", "1");
+        }
+        function closeSidebar() {
+            sidebar.classList.remove("open");
+            backdrop.classList.remove("show");
+            document.body.classList.remove("sidebar-open");
+            localStorage.setItem("omni_sidebar", "0");
+        }
+        function closeSidebarIfMobile() {
+            if (window.innerWidth < 720) closeSidebar();
+        }
+        // Restore sidebar state on wide screens
+        if (localStorage.getItem("omni_sidebar") === "1" && window.innerWidth >= 720) {
+            sidebar.classList.add("open");
+            document.body.classList.add("sidebar-open");
+        }
+
+        /* ---------- Footer actions ---------- */
+        function downloadChat() {
+            if (!history.length) {
+                alert("Nothing to download yet.");
+                return;
+            }
+            let content = `Omni Chat — ${new Date().toLocaleString()}\n\n`;
+            history.forEach(m => {
+                content += `[${m.role === "user" ? "You" : "Omni"}]\n${m.text}\n\n`;
+            });
+            const blob = new Blob([content], { type: "text/plain" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `omni-chat-${Date.now()}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        function showHelp() {
+            alert(
+                "How to use Omni:\n\n" +
+                "• Type a message and press Enter to send\n" +
+                "• Shift+Enter for a new line\n" +
+                "• Esc to stop streaming\n" +
+                "• Ctrl+K for a new chat\n\n" +
+                "Each message has Copy and Edit buttons.\n" +
+                "Bot replies have Copy and Regenerate."
+            );
+        }
+        function showAbout() {
+            alert(
+                "Omni — Your hybrid AI\n\n" +
+                "A modern, streaming AI chatbot.\n" +
+                "Built with HTML, CSS, JS, Node.js,\n" +
+                "DeepSeek, and Gemini.\n\n" +
+                "Version 1.0"
+            );
+        }
+        function clearData() {
+            if (!confirm("This will erase all your chats and settings. Continue?")) return;
+            localStorage.removeItem("omni_history");
+            localStorage.removeItem("omni_theme");
+            localStorage.removeItem("omni_sidebar");
+            history = [];
+            location.reload();
+        }
+
+        /* ---------- Theme ---------- */
         function applyTheme(theme) {
             document.documentElement.setAttribute("data-theme", theme);
             document.getElementById("themeIcon").innerHTML = theme === "dark"
@@ -799,9 +1221,12 @@
             return marked.parse(text).replace(/<script[\s\S]*?<\/script>/gi, "");
         }
 
+        /* ---------- Messages ---------- */
         function addMsg(text, role, opts = {}) {
             const wrap = document.createElement("div");
             wrap.className = "msg-wrap " + (role === "user" ? "user" : "bot");
+            wrap.dataset.index = opts.index;
+
             const div = document.createElement("div");
             div.className = "msg " + (role === "user" ? "user" : "bot");
             if (role === "bot") div.innerHTML = renderBot(text);
@@ -810,6 +1235,7 @@
 
             const actions = document.createElement("div");
             actions.className = "actions";
+
             const copyBtn = document.createElement("button");
             copyBtn.className = "action-btn";
             copyBtn.textContent = "Copy";
@@ -819,6 +1245,7 @@
                 setTimeout(() => (copyBtn.textContent = "Copy"), 1200);
             };
             actions.appendChild(copyBtn);
+
             if (role === "bot" && !opts.noRegen) {
                 const regen = document.createElement("button");
                 regen.className = "action-btn";
@@ -826,13 +1253,15 @@
                 regen.onclick = () => regenerate();
                 actions.appendChild(regen);
             }
-            if (role === "user") {
+
+            if (role === "user" && typeof opts.index === "number") {
                 const edit = document.createElement("button");
                 edit.className = "action-btn";
                 edit.textContent = "Edit";
-                edit.onclick = () => editMessage(opts.index);
+                edit.onclick = () => startEdit(wrap, opts.index);
                 actions.appendChild(edit);
             }
+
             wrap.appendChild(actions);
             chat.appendChild(wrap);
             chat.scrollTop = chat.scrollHeight;
@@ -898,6 +1327,68 @@
             if (currentController) currentController.abort();
         }
 
+        /* ---------- Edit in place ---------- */
+        function startEdit(wrap, index) {
+            if (streaming) return;
+            const m = history[index];
+            if (!m || m.role !== "user") return;
+
+            const originalHTML = wrap.innerHTML;
+
+            const msgDiv = wrap.querySelector(".msg");
+            const actionsDiv = wrap.querySelector(".actions");
+
+            const editWrap = document.createElement("div");
+            editWrap.style.width = "100%";
+
+            const ta = document.createElement("textarea");
+            ta.className = "edit-box";
+            ta.value = m.text;
+
+            const btns = document.createElement("div");
+            btns.className = "edit-actions";
+
+            const cancelBtn = document.createElement("button");
+            cancelBtn.className = "cancel-btn";
+            cancelBtn.textContent = "Cancel";
+            cancelBtn.onclick = () => { wrap.innerHTML = originalHTML; };
+
+            const saveBtn = document.createElement("button");
+            saveBtn.className = "save-btn";
+            saveBtn.textContent = "Save";
+            saveBtn.onclick = () => {
+                const newText = ta.value.trim();
+                if (newText) {
+                    history[index].text = newText;
+                    saveHistory();
+                }
+                renderAll();
+            };
+
+            ta.addEventListener("input", () => {
+                ta.style.height = "auto";
+                ta.style.height = Math.min(ta.scrollHeight, 200) + "px";
+            });
+            ta.addEventListener("keydown", e => {
+                if (e.key === "Escape") { e.preventDefault(); cancelBtn.click(); }
+                if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); saveBtn.click(); }
+            });
+
+            btns.appendChild(cancelBtn);
+            btns.appendChild(saveBtn);
+            editWrap.appendChild(ta);
+            editWrap.appendChild(btns);
+
+            msgDiv.replaceWith(editWrap);
+            if (actionsDiv) actionsDiv.style.display = "none";
+
+            ta.focus();
+            ta.setSelectionRange(ta.value.length, ta.value.length);
+            ta.style.height = "auto";
+            ta.style.height = Math.min(ta.scrollHeight, 200) + "px";
+        }
+
+        /* ---------- Streaming ---------- */
         async function streamReply() {
             currentController = new AbortController();
             const res = await fetch("/chat", {
@@ -1034,17 +1525,6 @@
             currentController = null;
         }
 
-        function editMessage(index) {
-            if (typeof index !== "number") return;
-            const m = history[index];
-            if (!m || m.role !== "user") return;
-            input.value = m.text;
-            input.focus();
-            autoResize();
-            history = history.slice(0, index);
-            saveHistory();
-            renderAll();
-        }
         function newChat() {
             if (streaming) return;
             if (history.length && !confirm("Clear this conversation?")) return;
@@ -1076,7 +1556,10 @@
         document.addEventListener("keydown", e => {
             const mod = e.ctrlKey || e.metaKey;
             if (mod && e.key.toLowerCase() === "k") { e.preventDefault(); newChat(); return; }
-            if (e.key === "Escape" && streaming) { e.preventDefault(); stopStreaming(); }
+            if (e.key === "Escape") {
+                if (streaming) { e.preventDefault(); stopStreaming(); }
+                else if (sidebar.classList.contains("open")) { e.preventDefault(); closeSidebar(); }
+            }
         });
 
         renderAll();

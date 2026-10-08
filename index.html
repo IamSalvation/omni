@@ -10,8 +10,8 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
     <link rel="icon" type="image/png" href="/favicon.png">
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-    <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Omni">
     <link rel="manifest" href="/site.webmanifest">
@@ -471,20 +471,20 @@
             padding: 8px 0 16px;
             display: flex;
             flex-direction: column;
-            gap: 18px;
+            gap: 22px;
         }
 
         /* ---------- Message structure ----------
-     Each message is a .msg-block:
-       .msg-block
-         .msg        ← the bubble
-         .actions    ← icons, on their own line, aligned to inner edge
+     .msg-block = wrapper (transparent)
+       .msg       = the bubble (has background)
+       .actions   = icons below, on page background
   -------------------------------------------- */
         .msg-block {
             display: flex;
             flex-direction: column;
             animation: fadeIn 0.25s ease-out;
             max-width: 85%;
+            background: transparent;
         }
 
         .msg-block.user {
@@ -519,9 +519,10 @@
             padding: 11px 15px;
             border-radius: var(--radius);
             max-width: 100%;
+            background: transparent;
         }
 
-        .user {
+        .msg.user {
             background: var(--user-bg);
             color: var(--user-text);
             border-bottom-right-radius: 4px;
@@ -530,7 +531,7 @@
             max-width: 100%;
         }
 
-        .bot {
+        .msg.bot {
             background: var(--bot-bg);
             color: var(--bot-text);
             border-bottom-left-radius: 4px;
@@ -538,16 +539,14 @@
             width: 100%;
         }
 
-        /* ---------- Actions ----------
-     Icons live BELOW the bubble, aligned to the inner edge.
-     They are visually detached — no background, no box.
-  ---------------------------------- */
+        /* ---------- Actions — separate row below the bubble ---------- */
         .actions {
             display: flex;
-            gap: 0;
-            margin-top: 2px;
+            gap: 2px;
+            margin-top: 6px;
             padding: 0;
             opacity: 1;
+            background: transparent;
         }
 
         .msg-block.user .actions {
@@ -1263,9 +1262,7 @@
                 try {
                     conversations = JSON.parse(raw);
                     currentId = localStorage.getItem("omni_current_id") || null;
-                } catch {
-                    conversations = [];
-                }
+                } catch { conversations = []; }
             }
             const oldHistory = localStorage.getItem("omni_history");
             if (oldHistory) {
@@ -1508,7 +1505,7 @@
             );
         }
         function showAbout() {
-            alert("Omni — Your hybrid AI\n\nA modern, streaming AI chatbot.\nBuilt with HTML, CSS, JS, Node.js, DeepSeek, and Gemini.\n\nVersion 1.3");
+            alert("Omni — Your hybrid AI\n\nA modern, streaming AI chatbot.\nBuilt with HTML, CSS, JS, Node.js, DeepSeek, and Gemini.\n\nVersion 1.4");
         }
         function clearData() {
             if (!confirm("This will erase ALL your chats and settings. Continue?")) return;

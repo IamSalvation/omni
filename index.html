@@ -474,11 +474,6 @@
             gap: 22px;
         }
 
-        /* ---------- Message structure ----------
-     .msg-block = wrapper (transparent)
-       .msg       = the bubble (has background)
-       .actions   = icons below, on page background
-  -------------------------------------------- */
         .msg-block {
             display: flex;
             flex-direction: column;
@@ -539,7 +534,6 @@
             width: 100%;
         }
 
-        /* ---------- Actions — separate row below the bubble ---------- */
         .actions {
             display: flex;
             gap: 2px;
@@ -933,6 +927,7 @@
             }
         }
 
+        /* ---------- Splash + animated logo ---------- */
         #splash {
             position: fixed;
             inset: 0;
@@ -951,12 +946,38 @@
             pointer-events: none;
         }
 
-        .splash-logo {
-            width: 88px;
-            height: 88px;
-            border-radius: 22px;
-            box-shadow: var(--shadow);
-            animation: splashIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+        .omni-logo {
+            width: 110px;
+            height: 110px;
+            display: block;
+            overflow: visible;
+        }
+
+        .omni-logo .draw {
+            stroke-dasharray: 1000;
+            stroke-dashoffset: 1000;
+        }
+
+        .omni-logo .draw-main {
+            animation: drawPath 1.4s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+        }
+
+        .omni-logo .draw-curl {
+            animation: drawPath 0.7s cubic-bezier(0.65, 0, 0.35, 1) 1.2s forwards;
+        }
+
+        @keyframes drawPath {
+            to {
+                stroke-dashoffset: 0;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .omni-logo .draw {
+                stroke-dasharray: none;
+                stroke-dashoffset: 0;
+                animation: none;
+            }
         }
 
         .splash-name {
@@ -964,21 +985,21 @@
             font-weight: 700;
             margin-top: 20px;
             letter-spacing: -0.02em;
-            animation: splashIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.1s both;
+            animation: splashIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 1.6s both;
         }
 
         .splash-tag {
             font-size: 13px;
             color: var(--muted);
             margin-top: 4px;
-            animation: splashIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.2s both;
+            animation: splashIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 1.8s both;
         }
 
         .splash-dots {
             display: inline-flex;
             gap: 6px;
             margin-top: 32px;
-            animation: splashIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.3s both;
+            animation: splashIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 2s both;
         }
 
         .splash-dots span {
@@ -1000,12 +1021,12 @@
         @keyframes splashIn {
             from {
                 opacity: 0;
-                transform: translateY(10px) scale(0.96);
+                transform: translateY(10px);
             }
 
             to {
                 opacity: 1;
-                transform: translateY(0) scale(1);
+                transform: translateY(0);
             }
         }
 
@@ -1082,8 +1103,19 @@
 
 <body>
 
+    <!-- ============ Splash with self-drawing logo ============ -->
     <div id="splash">
-        <img src="/logo.png" alt="Omni" class="splash-logo" onerror="this.src='/favicon.png'">
+        <svg class="omni-logo" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" aria-label="Omni">
+            <!-- Main O ring -->
+            <path class="draw draw-main"
+                d="M107.1 53.2L108.5 53.5L109.9 53.7L111.4 53.8L112.9 54.0L114.4 54.1L115.9 54.2L117.5 54.3L119.2 54.4L120.8 54.5L122.5 54.6L124.3 54.8L126.1 55.1L127.9 55.4L129.8 55.8L131.6 56.2L133.5 56.8L135.4 57.4L137.3 58.1L139.2 59.0L141.1 59.9L143.0 61.0L144.8 62.2L146.6 63.5L148.4 64.9L150.1 66.4L151.7 68.1L153.2 69.9L154.6 71.8L156.0 73.7L157.2 75.8L158.2 78.0L159.2 80.3L160.0 82.6L160.6 85.0L161.1 87.5L161.4 90.0L161.7 92.5L161.8 95.0L162.0 97.5L162.0 100.0L162.0 102.5L161.8 105.0L161.7 107.5L161.4 110.0L161.1 112.5L160.6 115.0L160.2 117.4L159.6 119.8L159.0 122.2L158.3 124.6L157.5 127.0L156.6 129.3L155.7 131.6L154.7 133.8L153.7 136.0L152.6 138.2L151.4 140.3L150.2 142.3L148.9 144.3L147.5 146.3L146.1 148.2L144.6 150.0L143.1 151.8L141.5 153.5L139.9 155.2L138.2 156.7L136.4 158.2L134.7 159.7L132.9 161.1L131.0 162.4L129.1 163.6L127.2 164.7L125.2 165.8L123.2 166.8L121.2 167.7L119.2 168.5L117.1 169.2L115.0 169.9L112.9 170.4L110.8 170.9L108.6 171.3L106.5 171.6L104.3 171.8L102.2 172.0L100.0 172.0L97.8 172.0L95.7 171.8L93.5 171.6L91.4 171.3L89.2 170.9L87.1 170.4L85.0 169.9L82.9 169.2L80.8 168.5L78.8 167.7L76.8 166.8L74.8 165.8L72.8 164.7L70.9 163.6L69.0 162.4L67.1 161.1L65.3 159.7L63.6 158.2L61.8 156.7L60.1 155.2L58.5 153.5L56.9 151.8L55.4 150.0L53.9 148.2L52.5 146.3L51.1 144.3L49.8 142.3L48.6 140.3L47.4 138.2L46.3 136.0L45.3 133.8L44.3 131.6L43.4 129.3L42.5 127.0L41.7 124.6L41.0 122.2L40.4 119.8L39.8 117.4L39.4 115.0L38.9 112.5L38.6 110.0L38.3 107.5L38.2 105.0L38.0 102.5L38.0 100.0L38.0 97.5L38.2 95.0L38.3 92.5L38.6 90.0L38.9 87.5L39.4 85.0L39.8 82.6L40.4 80.2L41.0 77.8L41.7 75.4L42.5 73.0L43.4 70.7L44.3 68.4L45.3 66.2L46.3 64.0L47.4 61.8L48.6 59.7L49.8 57.7L51.1 55.7L52.5 53.7L53.9 51.8L55.4 50.0L56.9 48.2L58.5 46.5L60.1 44.8L61.8 43.3L63.6 41.8L65.3 40.3L67.1 38.9L69.0 37.6L70.9 36.4L72.8 35.3L74.8 34.2L76.8 33.2L78.8 32.3L80.8 31.5L82.9 30.8L85.0 30.1L87.1 29.6L89.2 29.1L91.4 28.7L93.5 28.4L95.7 28.2L97.8 28.0L100.0 28.0L102.2 28.0L104.3 28.2L106.5 28.4L108.6 28.7L110.8 29.1L112.9 29.6L115.0 30.4L117.0 31.3L118.9 32.4L120.8 33.6L122.6 35.0L124.3 36.6L126.0 38.2L127.5 40.0L128.9 41.8L130.2 43.8L131.5 45.8L132.6 47.9L133.6 50.1L134.5 52.2L135.3 54.4L136.1 56.6L136.7 58.9L137.2 61.1L137.7 63.3L138.1 65.4L138.4 67.6L138.7 69.7L138.9 71.8L139.1 73.8L139.2 75.8L139.3 77.7L139.4 79.6L139.5 81.5L139.5 83.3L139.6 85.0L139.8 86.8L139.9 88.4L140.1 90.1L140.3 91.7"
+                fill="none" stroke="#5B21B6" stroke-width="18" stroke-linecap="round" stroke-linejoin="round" />
+
+            <!-- Curl at top-right -->
+            <path class="draw draw-curl"
+                d="M110.8 29.1L112.9 29.6L115.0 30.4L117.0 31.3L118.9 32.4L120.8 33.6L122.6 35.0L124.3 36.6L126.0 38.2L127.5 40.0L128.9 41.8L130.2 43.8L131.5 45.8L132.6 47.9L133.6 50.1L134.5 52.2L135.3 54.4L136.1 56.6L136.7 58.9L137.2 61.1L137.7 63.3L138.1 65.4L138.4 67.6L138.7 69.7L138.9 71.8L139.1 73.8L139.2 75.8L139.3 77.7L139.4 79.6L139.5 81.5L139.5 83.3L139.6 85.0L139.8 86.8L139.9 88.4L140.1 90.1L140.3 91.7"
+                fill="none" stroke="#5B21B6" stroke-width="18" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
         <div class="splash-name">Omni</div>
         <div class="splash-tag">Your hybrid AI</div>
         <div class="splash-dots"><span></span><span></span><span></span></div>
@@ -1505,7 +1537,7 @@
             );
         }
         function showAbout() {
-            alert("Omni — Your hybrid AI\n\nA modern, streaming AI chatbot.\nBuilt with HTML, CSS, JS, Node.js, DeepSeek, and Gemini.\n\nVersion 1.4");
+            alert("Omni — Your hybrid AI\n\nA modern, streaming AI chatbot.\nBuilt with HTML, CSS, JS, Node.js, DeepSeek, and Gemini.\n\nVersion 1.5");
         }
         function clearData() {
             if (!confirm("This will erase ALL your chats and settings. Continue?")) return;
@@ -1924,7 +1956,7 @@
             setTimeout(() => {
                 splash.classList.add("hide");
                 setTimeout(() => splash.remove(), 600);
-            }, 1200);
+            }, 2400);
         });
     </script>
 </body>

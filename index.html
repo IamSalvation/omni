@@ -560,6 +560,7 @@
             border-bottom-left-radius: 4px;
             box-shadow: var(--shadow);
             width: 100%;
+            overflow-x: hidden;
         }
 
         .actions {
@@ -666,6 +667,7 @@
             background: var(--bot-bg);
         }
 
+        /* ---------- Markdown content ---------- */
         .bot p {
             margin: 0 0 10px;
         }
@@ -737,6 +739,65 @@
             margin: 8px 0;
             padding: 4px 12px;
             color: var(--muted);
+        }
+
+        .bot hr {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: 16px 0;
+        }
+
+        /* Markdown tables — scroll horizontally instead of overflowing */
+        .bot table {
+            width: 100%;
+            max-width: 100%;
+            border-collapse: collapse;
+            margin: 12px 0;
+            font-size: 13px;
+            display: block;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            background: var(--panel);
+            border-radius: 10px;
+        }
+
+        .bot thead {
+            background: var(--inline-code-bg);
+        }
+
+        .bot th,
+        .bot td {
+            padding: 8px 12px;
+            text-align: left;
+            border: 1px solid var(--border);
+            vertical-align: top;
+            white-space: normal;
+            word-wrap: break-word;
+            min-width: 110px;
+        }
+
+        .bot th {
+            font-weight: 600;
+            font-size: 12.5px;
+            color: var(--text);
+        }
+
+        .bot td {
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .bot table::-webkit-scrollbar {
+            height: 6px;
+        }
+
+        .bot table::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+        .bot table::-webkit-scrollbar-thumb:hover {
+            background: var(--muted);
         }
 
         .welcome {
@@ -955,7 +1016,7 @@
             }
         }
 
-        /* ---------- Splash (flat, no gradient) ---------- */
+        /* ---------- Splash ---------- */
         #splash {
             position: fixed;
             inset: 0;
@@ -1131,7 +1192,6 @@
 
 <body>
 
-    <!-- ============ Splash with self-drawing logo ============ -->
     <div id="splash">
         <svg class="omni-logo" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" aria-label="Omni">
             <path class="draw draw-main"
@@ -1562,7 +1622,7 @@
             );
         }
         function showAbout() {
-            alert("Omni — Your hybrid AI\n\nA modern, streaming AI chatbot.\nBuilt with HTML, CSS, JS, Node.js, DeepSeek, and Gemini.\n\nVersion 1.6");
+            alert("Omni — Your hybrid AI\n\nA modern, streaming AI chatbot.\nBuilt with HTML, CSS, JS, Node.js, DeepSeek, and Gemini.\n\nVersion 1.7");
         }
         function clearData() {
             if (!confirm("This will erase ALL your chats and settings. Continue?")) return;
